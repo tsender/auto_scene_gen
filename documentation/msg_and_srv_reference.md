@@ -1,3 +1,9 @@
+This page contains the custom message and service definitions within the `auto_scene_gen_msgs` package.
+
+Quick Links
+- [Messages Reference](#autoscenegen-messages-reference)
+- [Services Reference](#autoscenegen-services-reference)
+
 # AutoSceneGen Messages Reference
 
 ## LandscapeDescription.msg
@@ -93,7 +99,7 @@ scale                   | float32[]             | The mesh's scale (applies to a
 
 ## VehicleNodeOperatingInfo.msg
 
-This message is published by the AutoScenegen client to tell all registered vehicle nodes important operating information. This info includes: if all vehicle nodes for that worker are ready, where the nodes should save their internal data and how much data to save. Each array has the same length and all data is organized according to the order of the worker ID in the 'worker_ids' field.
+This message is published by the AutoSceneGen client to tell all registered vehicle nodes important operating information. This info includes: if all vehicle nodes for that worker are ready, where the nodes should save their internal data and how much data to save. Each array has the same length and all data is organized according to the order of the worker ID in the 'worker_ids' field.
 
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
@@ -130,7 +136,7 @@ vehicle_sim_time        | float32                                         | Tota
 Possible Termination Reasons
 **Reason**                      | **Value**     | Description
 ------------------------        |---            |---
-REASON_SUCCESS                  | 0             | Vehicle reached the goal safely within the alloted time.
+REASON_SUCCESS                  | 0             | Vehicle reached the goal safely within the allotted time.
 REASON_VEHICLE_COLLISION        | 1             | Vehicle crashed into a non-traversable obstacle (any form of contact counts as collision).
 REASON_VEHICLE_FLIPPED          | 2             | Vehicle turned or flipped over.
 REASON_SIM_TIMEOUT              | 3             | Simulation timeout expired.
@@ -141,7 +147,6 @@ Idling and Getting Stuck
 - We define *idling* as commanding near-zero velocity while undergoing near-zero velocity.
 - We define *being stuck* as commanding non-zero velocity while undergoing near-zero velocity.
 
-
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
@@ -149,30 +154,78 @@ received                | bool                  | Indicates the AutoSceneGen cli
 
 ## NotifyReady.srv
 
+This service message is used for each vehicle node to notify the AutoSceneGen client that it is ready for the next scenario. These notifications allow the client to ensure all nodes are ready before proceeding on to the next scenario
+
 ### Request
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-
+worker_id               | uint8                 | AutoSceneGen worker ID this node is associated with.
+node_name               | string                | Name of the registered node.
+last_scenario_number    | uint32                | Last scenario number that was just ran.
+request_rerun           | bool                  | Indicate if the vehicle node wants to rerun the previous scenario (e.g., due to a problem it encountered).
+reason_for_rerun        | string                | Reason for requesting a rerun
+ 
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
+received                | bool                  | Indicates the AutoSceneGen client received the notification.
+accepted                | bool                  | Indicates the AutoSceneGen client accepted the request. False means it was ignored (since it accepted the first request).
 
 ## RegisterVehicleNode.srv
 
+This service message is used for each vehicle node to register itself with the AutoSceneGen client. Registering guarantees the AutoSceneGen client will not proceed until all registered vehicle nodes have indicated they are ready to proceed with a NotifyReady request.
+
 ### Request
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
+worker_id               | uint8                 | AutoSceneGen worker ID this node is associated with.
+node_name               | string                | Name of the node to register.
 
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
+received                | bool                  | Indicates the AutoSceneGen client received the notification.
 
 ## RunScenario.srv
 
+This service message is used to define the scenario that the AutoSceneGenWorker should run. RunScenario requests are to be submitted by an external entity from UE4 which we refer to as an AutoSceneGen client.
+
 ### Request
-**Field**               | **Type**              | **Description**
-------------------------|-----------------------|----------------
+**Field**                     | **Type**              | **Description**
+------------------------------|-----------------------|----------------
+scenario_number               | int32                               | Mainly just used to check on progress.
+sim_timeout_period            | float32                             | Maximum amount of time [s] to let the simulation run before terminating. Set to -1 to disable feature.
+vehicle_idling_timeout_period | float32                             | Maximum amount of time [s] the vehicle can idle (once it began moving) before terminating the simulation. Set to -1 to disable feature.
+vehicle_stuck_timeout_period  | float32                             | Maximum amount of time [s] the vehicle can be "stuck", like on an obstacle, before terminating the simulation. Set to -1 to disable feature.
+max_vehicle_roll              | float32                             | Max allowed vehicle roll angle [deg]. Simulation will end if this threshold is met.
+max_vehicle_pitch             | float32                             | Max allowed vehicle pitch angle [deg]. Simulation will end if this threshold is met.
+allow_collisions              | bool                                | If true, then the simulator will not terminate the simulation if the vehicle touches a non-traversable obstacle. If false, then the simulation will terminate with reason REASON_VEHICLE_COLLISION (see AnalyzeScenario.srv) if the vehicle touches a non-traversable obstacle.
+vehicle_start_location        | geometry_msgs/Point                 | Vehicle start location in [cm]. The Z location is ignored and will be populated by the AutoSceneGenWorker in UE4.
+vehicle_start_yaw             | float32                             | Vehicle starting yaw angle in [deg].
+vehicle_goal_location         | geometry_msgs/Point                 | Vehicle goal location in [cm]. The Z location is ignored and will be populated by the AutoSceneGenWorker in UE4.
+goal_radius                   | float32                             | If vehicle is within this distance in [cm] of the goal location, then we assume the vehicle succeeded.
+scene_description             | auto_scene_gen_msgs/SceneDescription | The scene description.
+take_scene_capture            | bool                                | Indicates if we should take scene captures to send back to the client.
+scene_capture_only            | bool                                | Indicates if we should only take scene captures after creating the scene (the scneario will NOT be run).
+scene_capture_settings        | auto_scene_gen_msgs/SceneCaptureSettings | Scene capture settings.
 
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
+received                | bool                  | Indicates the AutoSceneGenWorker received the RunScenario request
+
+## WorkerIssueNotification.srv
+
+This services is to be invoked by the AutoSceneGen Worker to inform the AutoSceneGen Client of an issue.
+
+### Request
+**Field**               | **Type**              | **Description**
+------------------------|-----------------------|----------------
+worker_id               | uint8                 | Worker ID sending the notification
+issue_id                | uint8                 | Issue at hand.<br>ISSUE_ROSBRIDGE_INTERRUPTED = 0<br>ISSUE_PROBLEM_CREATING_SCENE = 1
+message                 | string                | Message string, if any message needs to be relaid to the AutoSceneGen client. Can be empty.
+
+### Response
+**Field**               | **Type**              | **Description**
+------------------------|-----------------------|----------------
+received                | bool                  | Indicates the AutoSceneGen client received the notification.
