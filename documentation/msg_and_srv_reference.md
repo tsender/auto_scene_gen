@@ -114,18 +114,18 @@ preempted               | bool                  | Indicates if the vehicle was d
 
 # AutoSceneGen Services Reference
 
-# AnalyzeScenario.srv
+## AnalyzeScenario.srv
 
 This service message is used to convey useful information about the vehicle's last run.
 
 ### Request
-**Field**               | **Type**              | **Description**
-------------------------|-----------------------|----------------
-worker_id               | uint8                 | AutoSceneGen worker ID sending the request.
-scenario_number         | uint16                | Scenario number that the AutoSceneGenWorker just executed.
-termination_reason      | uint8                 | Reason for ending the simulation. See table below for possible values.
+**Field**               | **Type**                                        | **Description**
+------------------------|-------------------------------------------------|----------------
+worker_id               | uint8                                           | AutoSceneGen worker ID sending the request.
+scenario_number         | uint16                                          | Scenario number that the AutoSceneGenWorker just executed.
+termination_reason      | uint8                                           | Reason for ending the simulation. See table below for possible values.
 vehicle_trajectory      | auto_scene_gen_msgs/OdometryWithoutCovariance[] | The vehicle's trajectory from start to goal.
-vehicle_sim_time        | float32               | Total length of vehicle simulation time (from when the first control input was received).
+vehicle_sim_time        | float32                                         | Total length of vehicle simulation time (from when the first control input was received).
 
 Possible Termination Reasons
 **Reason**                      | **Value**     | Description
@@ -135,7 +135,11 @@ REASON_VEHICLE_COLLISION        | 1             | Vehicle crashed into a non-tra
 REASON_VEHICLE_FLIPPED          | 2             | Vehicle turned or flipped over.
 REASON_SIM_TIMEOUT              | 3             | Simulation timeout expired.
 REASON_VEHICLE_IDLING_TIMEOUT   | 4             | Vehicle idling timeout experied.
-REASON_VEHICLE_STUCK_TIMEOUT    | 5             | Vehicle got stuck enroute, such as on a rock or collided with an obstacle and cannot recover. Note: we separate stuck from having flipped over.
+REASON_VEHICLE_STUCK_TIMEOUT    | 5             | Vehicle got stuck enroute (e.g., due to a collision) and could not recover within a certain timeout expired. Note: we separate stuck from having flipped over.
+
+Idling and Getting Stuck
+- We define *idling* as commanding near-zero velocity while undergoing near-zero velocity.
+- We define *being stuck* as commanding non-zero velocity while undergoing near-zero velocity.
 
 
 ### Response
@@ -143,7 +147,7 @@ REASON_VEHICLE_STUCK_TIMEOUT    | 5             | Vehicle got stuck enroute, suc
 ------------------------|-----------------------|----------------
 received                | bool                  | Indicates the AutoSceneGen client received the AnalyzeScenario request.
 
-# NotifyReady.srv
+## NotifyReady.srv
 
 ### Request
 **Field**               | **Type**              | **Description**
@@ -153,7 +157,7 @@ received                | bool                  | Indicates the AutoSceneGen cli
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
 
-# RegisterVehicleNode.srv
+## RegisterVehicleNode.srv
 
 ### Request
 **Field**               | **Type**              | **Description**
@@ -163,7 +167,7 @@ received                | bool                  | Indicates the AutoSceneGen cli
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
 
-# RunScenario.srv
+## RunScenario.srv
 
 ### Request
 **Field**               | **Type**              | **Description**
