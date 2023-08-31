@@ -4,12 +4,12 @@ One of the primary functions of this interface is to provide a set of tools to r
 
 ## Terminology
 
-In the context of the AutoSceneGen ecosystem, a *scene* refers to the physical static operating environment for a system (this includes the geometric structure and any textural properties like weather conditions). The *environment* describes both the static and dynamic elements of the entire operating environment (including any dynamic actors). And the *scenario* combines the static and dynamic environment descriptions with the task assigned to the vehicle/agent and any constraints that may be imposed on its behavior.
+In the context of the AutoSceneGen ecosystem, a *scene* refers to the physical static operating environment for the vehicle (this includes the geometric structure and any textural properties like weather conditions). The *environment* describes both the static and dynamic elements of the entire operating environment (including any dynamic actors). And the *scenario* combines the static and dynamic environment descriptions with the task assigned to the vehicle/agent and any constraints that may be imposed on its behavior.
 
 Whether we are discussing the scene, environment, or scenario, all of these objects are composed of a collection of attributes that define that particular object. We will decompose these attributes into various categories, with the main ones being:
 - Strutural Attributes: These attributes define the geometry of all structural objects that compose the scene. This includes the ground plane, static obstacles, water bodies, etc.
 - Textural Attributes: These attributes enhance the visual realism of the environment by describing visual effects. These attributes include weather intensities.
-- Operational Attributes: These attributes describe operational constraints on the test system's behavior  (e.g., go/no-go zones, speed ranges, etc.), can define the system's task, as well as describe the behavior of other agents.
+- Operational Attributes: These attributes describe operational constraints on the vehicle's behavior  (e.g., go/no-go zones, speed ranges, etc.), can define the vehicle's task, as well as describe the behavior of other agents.
 
 ## AutoSceneGenWorkerRef
 
@@ -28,6 +28,6 @@ Please refer to the `AutoSceneGenWorkerRef` class in auto_scene_gen_core/client_
 
 ## AutoScenegenScenarioBuilder
 
-This is the base class for creating scenarios. Before we can discuss the details, we must first describe how a scenario is defined. 
+This is the base class for creating scenarios. As mentioned above, scenarios are composed of many defining attributes.
 
 ## AutoSceneGenClient Node
