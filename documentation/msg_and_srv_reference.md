@@ -127,7 +127,7 @@ This service message is used to convey useful information about the vehicle's la
 ### Request
 **Field**               | **Type**                                        | **Description**
 ------------------------|-------------------------------------------------|----------------
-worker_id               | uint8                                           | AutoSceneGen worker ID sending the request.
+worker_id               | uint8                                           | AutoSceneGenWorker ID sending the request.
 scenario_number         | uint16                                          | Scenario number that the AutoSceneGenWorker just executed.
 termination_reason      | uint8                                           | Reason for ending the simulation. See table below for possible values.
 vehicle_trajectory      | auto_scene_gen_msgs/OdometryWithoutCovariance[] | The vehicle's trajectory from start to goal.
@@ -150,16 +150,16 @@ Idling and Getting Stuck
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-received                | bool                  | Indicates the AutoSceneGen client received the AnalyzeScenario request.
+received                | bool                  | Indicates the AutoSceneGenClient received the AnalyzeScenario request.
 
 ## NotifyReady.srv
 
-This service message is used for each vehicle node to notify the AutoSceneGen client that it is ready for the next scenario. These notifications allow the client to ensure all nodes are ready before proceeding on to the next scenario
+This service message is used for each vehicle node to notify the AutoSceneGenClient that it is ready for the next scenario. These notifications allow the client to ensure all nodes are ready before proceeding on to the next scenario
 
 ### Request
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-worker_id               | uint8                 | AutoSceneGen worker ID this node is associated with.
+worker_id               | uint8                 | AutoSceneGenWorker ID this node is associated with.
 node_name               | string                | Name of the registered node.
 last_scenario_number    | uint32                | Last scenario number that was just ran.
 request_rerun           | bool                  | Indicate if the vehicle node wants to rerun the previous scenario (e.g., due to a problem it encountered).
@@ -168,27 +168,27 @@ reason_for_rerun        | string                | Reason for requesting a rerun
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-received                | bool                  | Indicates the AutoSceneGen client received the notification.
-accepted                | bool                  | Indicates the AutoSceneGen client accepted the request. False means it was ignored (since it accepted the first request).
+received                | bool                  | Indicates the AutoSceneGenClient received the notification.
+accepted                | bool                  | Indicates the AutoSceneGenClient accepted the request. False means it was ignored (since it accepted the first request).
 
 ## RegisterVehicleNode.srv
 
-This service message is used for each vehicle node to register itself with the AutoSceneGen client. Registering guarantees the AutoSceneGen client will not proceed until all registered vehicle nodes have indicated they are ready to proceed with a NotifyReady request.
+This service message is used for each vehicle node to register itself with the AutoSceneGenClient. Registering guarantees the AutoSceneGenClient will not proceed until all registered vehicle nodes have indicated they are ready to proceed with a NotifyReady request.
 
 ### Request
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-worker_id               | uint8                 | AutoSceneGen worker ID this node is associated with.
+worker_id               | uint8                 | AutoSceneGenWorker ID this node is associated with.
 node_name               | string                | Name of the node to register.
 
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-received                | bool                  | Indicates the AutoSceneGen client received the notification.
+received                | bool                  | Indicates the AutoSceneGenClient received the notification.
 
 ## RunScenario.srv
 
-This service message is used to define the scenario that the AutoSceneGenWorker should run. RunScenario requests are to be submitted by an external entity from UE4 which we refer to as an AutoSceneGen client.
+This service message is used to define the scenario that the AutoSceneGenWorker should run. RunScenario requests are to be submitted by an external entity from UE4 which we refer to as an AutoSceneGenClient.
 
 ### Request
 **Field**                     | **Type**              | **Description**
@@ -216,7 +216,7 @@ received                | bool                  | Indicates the AutoSceneGenWork
 
 ## WorkerIssueNotification.srv
 
-This services is to be invoked by the AutoSceneGen Worker to inform the AutoSceneGen Client of an issue.
+This services is to be invoked by the AutoSceneGenWorker to inform the AutoSceneGenClient of an issue.
 
 ### Request
 **Field**               | **Type**              | **Description**
@@ -228,4 +228,4 @@ message                 | string                | Message string, if any message
 ### Response
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-received                | bool                  | Indicates the AutoSceneGen client received the notification.
+received                | bool                  | Indicates the AutoSceneGenClient received the notification.
