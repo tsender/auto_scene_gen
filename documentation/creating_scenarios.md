@@ -1,4 +1,4 @@
-# ROS Interface for Creating Scenarios with the AutomaticSceneGeneration Plugin
+# ROS Interface for Creating and Running Scenarios with the AutomaticSceneGeneration Plugin
 
 One of the primary functions of this interface is to provide a set of tools to request AutoSceneGenWorkers to create various scenarios for off-road AV testing, conduct the simulated navigation task, and report back what the vehicle's actions were. The interface we developed for this task requires an AutoSceneGenWorkerRef, an AutoSceneGenScenarioBuilder, and an AutoSceneGenClient node.
 
@@ -29,11 +29,11 @@ Please refer to the `AutoSceneGenWorkerRef` class in auto_scene_gen_core/client_
 
 ## AutoSceneGenScenarioBuilder
 
-This is the base class for creating scenarios. This platform currently only supports creating scenarios for a navigation task for a single vehicle, meaning we must define the environment, the vehicle's starting location, and the goal location. All classes mentioned in this section can be found in auto_scene_gen_core/scenario_builder.py, and all message/service definitions can be found in LINK.
+This is the base class for creating scenarios. This platform currently only supports creating scenarios for a navigation task for a single vehicle, and all scenarios must be defined via the ROS interface. All classes mentioned in this section can be found in auto_scene_gen_core/scenario_builder.py, and all message/service definitions can be found in LINK.
 
 ### Scenario Attributes
 
-As mentioned above, scenarios are composed of a collection of various attributes. Before we can create a scenario in code, we must first define groups of scenario attributes (e.g., structural attributes, textural attributes, etc.), the types of attributes that each group contains, and the allowed value (or range of values) that each attribute can take on. The `ScenarioAttribute` class is the lowest level for defining any type of attribute, and takes as input the name of the attribute and the allowed value (or range of values). The `ScenarioAttributeGroup` class is a base class used for defining groups of attributes. All attribute groups that we define inherit from this class. This interface provides several useful scenario attribute groups.
+As mentioned above, scenarios are composed of a collection of various attributes. Before we can create a scenario in code, we must first define groups of scenario attributes (e.g., structural attributes, textural attributes, etc.), the types of attributes that each group contains, and the allowed value (or range of values) that each attribute can take on. The `ScenarioAttribute` class is the lowest level for defining any type of attribute, and takes as input the name of the attribute and the allowed value (or range of values). The `ScenarioAttributeGroup` class is a base class used for defining groups of attributes. All attribute groups that we define inherit from this class. This interface provides several base scenario attribute groups.
 
 #### StructuralSceneActorAttributes
 - Description: Describes the geometric attributes related to SSAs. While we could make a separate class for each type of SSA, right now we choose the simple route of having only one group that applies to all SSAs.
@@ -63,5 +63,13 @@ As mentioned above, scenarios are composed of a collection of various attributes
   - `vehicle_stuck_timeout_period`: The maximum amount of time the vehicle can be stuck
   - `max_vehicle_roll`: The maximum allowed roll angle for the vehicle
   - `max_vehicle_pitch`: The maximum allowed pitch angle for the vehicle
+
+### Creating Scenarios
+To create a scenario, we first create instances of the `ScenarioAttributeGroups` discussed above. Then we can create an instance of the `AutoSceneGenScenarioBuilder` class which requires the following parameters:
+- `landscape_nominal_size`: The size of the nominal landscape in [m]. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
+- `landscape_subdivisions`: The number of times the triangles in the nominal landscape mesh should be subdivided. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
+- `landscape_border`: The minimum allowed amount of padding for the landscape border. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
+- `ssa_attr`: The StructuralSceneActorAttributes instance to use
+- 
 
 ## AutoSceneGenClient Node
