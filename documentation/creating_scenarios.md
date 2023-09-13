@@ -68,14 +68,40 @@ As mentioned above, scenarios are composed of a collection of various attributes
   - `max_vehicle_pitch`: The maximum allowed pitch angle for the vehicle [deg]
 
 ### Structural Scene Actor Config
-When working with SSAs, we need both the `StructuralSceneActorAttributes` object as well as a special `SctructuralSceneActorConfig` instance for each SSA. This objects holds additional information needed to 
+When working with SSAs, we will need two types of objects: the `StructuralSceneActorAttributes` object discussed above and a `SctructuralSceneActorConfig` object. For every SSA we will need a `SctructuralSceneActorConfig` object that contains additional information needed to populate the scene. Creating a `SctructuralSceneActorConfig` requires the following parameters:
+- `blueprint_directory`: The directory to find the Blueprint in the UE project, starts with "/Game/"
+- `blueprint_name`: The name of the Blueprint (excluding extensions)
+- `num_instances`: The number of instances that can be placed in the game
+- `max_scale`: The maximum scale factor (we keep this separate from the scene attributes in case the user wants more control)
+- `ssa_type`: The type of SSA, e.g., tree or bush
+The first four parameters are used by the AutoSceneGenClient node when populating the `RunScenario` request.
 
 ### Creating Scenarios
-To create a scenario, we first create instances of the `ScenarioAttributeGroups` discussed above. Then we can create an instance of the `AutoSceneGenScenarioBuilder` class which requires the following parameters:
+The `AutoSceneGenScenarioBuilder` class is the main class used to create scenarios and it requires the following parameters:
 - `landscape_nominal_size`: The size of the nominal landscape in [m]. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
-- `landscape_subdivisions`: The number of times the triangles in the nominal landscape mesh should be subdivided. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
-- `landscape_border`: The minimum allowed amount of padding for the landscape border. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
-- `ssa_attr`: The StructuralSceneActorAttributes instance to use
-- 
+- `landscape_subdivisions`: The number of times the triangles in the nominal landscape mesh should be subdivided. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md#autoscenegenlandscape) actor for more details.
+- `landscape_border`: The minimum allowed amount of padding for the landscape border. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md#autoscenegenlandscape) actor for more details.
+- `ssa_attr`: The `StructuralSceneActorAttributes` instance to use
+- `ssa_config`: A list of `StructuralSceneActorConfig` objects for the various SSAs that can be placed in the scene
+- `b_ssa_casts_shadow`: Indicates if the SSAs cast a shadow in the game
+- `b_allow_collisions`: Indicate if simulation keeps running in the case of vehicle collisions
+- `txt_attr`: The `TexturalAttributes` instance to use
+- `opr_attr`: The `OperationalAttributes` instance to use
+- `start_obstacle_free_radius`: Obstacle-free radius [m] around the start location
+- `goal_obstacle_free_radius`: Obstacle-free radius [m] around the goal location
+
+The `AutoSceneGenScenarioBuilder` class provides a number of basic methods that may be useful in your own applications. The functions worth discussing are shown below:
+- `create_default_run_scenario_request(self)`: Calling this function will create and return an `auto_scene_gen_msgs/RunScenario` request using the default attribute values provided in the scene builder parameters.
+- `create_default_scene_description_msg(self)`: This function is internally called by `create_default_run_scenario_request()`.
+- `get_unreal_engine_run_scenario_request(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request)`: When we create the scene/scenario via code, we do so assuming a right-handed north-west-up coordinate frame with meters as the base positional unit of measurement. However, UE uses a left-handed coordinate system and uses centimeters. Calling this function will return the equivalent `RunScenario` request so that UE an properly create and run the scenario.
+- `get_unreal_engine_scene_description(self, scene_description: auto_scene_gen_msgs.SceneDescription)`: This function is called internally by `get_unreal_engine_run_scenario_request(...)`.
+- `is_scenario_request_feasible(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request)`: Since it is important to create scenarios that are feasible for the test system, it may be useful to have a custom function that evaluates if a given `RunScenario` request satisfies your feasibility criteria. In the base class this function simply returns true. But this function can be overriden in a child scenario builder class.
+
+There are several other functions provided by the `AutoSceneGenScenarioBuilder` class that may be useful. Please look through the source code for their description. 
+
+Depending on your needs, you are welcome to add features to the UE4 plugin and to this interface. However, extending the scene building functionality requires that you are able to modify *all* components in the scene building pipeline, including:
+- The `AutoSceneGenWorker`
+- The `AutoSceneGenScenarioBuilder` and/or your new child class (including many of the provided functions)
+- The `auto_scene_gen_msgs/RunScenario` request definition in both the ROS and UE4 version of the `auto_scene_gen_msgs` package.
 
 ## AutoSceneGenClient Node
