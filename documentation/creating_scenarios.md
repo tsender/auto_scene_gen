@@ -35,34 +35,40 @@ This is the base class for creating scenarios. This platform currently only supp
 
 As mentioned above, scenarios are composed of a collection of various attributes. Before we can create a scenario in code, we must first define groups of scenario attributes (e.g., structural attributes, textural attributes, etc.), the types of attributes that each group contains, and the allowed value (or range of values) that each attribute can take on. The `ScenarioAttribute` class is the lowest level for defining any type of attribute, and takes as input the name of the attribute and the allowed value (or range of values). The `ScenarioAttributeGroup` class is a base class used for defining groups of attributes. All attribute groups that we define inherit from this class. This interface provides several base scenario attribute groups.
 
-#### StructuralSceneActorAttributes
+#### Structural Scene Actor Attributes
+- Class Name: `StructuralSceneActorAttributes`
 - Description: Describes the geometric attributes related to SSAs. While we could make a separate class for each type of SSA, right now we choose the simple route of having only one group that applies to all SSAs.
 - Attributes:
-  - `x`: The x-coordinate for the SSA 
-  - `y`: The y-coordinate for the SSA
-  - `yaw`: The yaw angle for the SSA
-  - `scale`: The scale factor for the SSA (applies to all three dimensions)
+  - `x`: The x-coordinate for the SSA [m]
+  - `y`: The y-coordinate for the SSA [m]
+  - `yaw`: The yaw angle for the SSA [deg]
+  - `scale`: The scale factor for the SSA (applies to all three dimensions) multilying the max_scale parameter for the particular SSA (see StructuralSceneActorConfig)
 
-#### TexturalAttributes
+#### Textural Attributes
+- Class Name: `TexturalAttributes`
 - Description: Describes the textural attributes of the environment.
 - Attributes:
-  - `sunlight_inclination`: The angle the sun makes with the horizontal plane
-  - `sunlight_yaw`: The angle in which the sun is pointing in
+  - `sunlight_inclination`: The angle the sun makes with the horizontal plane [deg]
+  - `sunlight_yaw`: The angle in which the sun is pointing in [deg]
  
-#### OperationalAttributes
+#### Operational Attributes
+- Class Name: `OperationalAttributes`
 - Description: Describes the operational attributes for the scenario.
 - Attributes:
-  - `start_location_x`: The x-coordinate for the vehicle's starting position
-  - `start_location_y`: The y-coordinate for the vehicle's starting position
-  - `start_yaw`: The yaw angle for the vehicle's starting position
-  - `goal_location_x`: The x-coordinate for the vehicle's goal position
-  - `goal_location_y`: The y-coordinate for the vehicle's goal position
-  - `goal_radius`: The goal radius
-  - `sim_timeout_period`: The simulation timeout period
-  - `vehicle_idling_timeout_period`: The maximum amount of time the vehicle can idle
-  - `vehicle_stuck_timeout_period`: The maximum amount of time the vehicle can be stuck
-  - `max_vehicle_roll`: The maximum allowed roll angle for the vehicle
-  - `max_vehicle_pitch`: The maximum allowed pitch angle for the vehicle
+  - `start_location_x`: The x-coordinate for the vehicle's starting position [m]
+  - `start_location_y`: The y-coordinate for the vehicle's starting position [m]
+  - `start_yaw`: The yaw angle for the vehicle's starting position [deg]
+  - `goal_location_x`: The x-coordinate for the vehicle's goal position [m]
+  - `goal_location_y`: The y-coordinate for the vehicle's goal position [m]
+  - `goal_radius`: The goal radius [m]
+  - `sim_timeout_period`: The simulation timeout period [s]
+  - `vehicle_idling_timeout_period`: The maximum amount of time the vehicle can idle [s]
+  - `vehicle_stuck_timeout_period`: The maximum amount of time the vehicle can be stuck [s]
+  - `max_vehicle_roll`: The maximum allowed roll angle for the vehicle [deg]
+  - `max_vehicle_pitch`: The maximum allowed pitch angle for the vehicle [deg]
+
+### Structural Scene Actor Config
+When working with SSAs, we need both the `StructuralSceneActorAttributes` object as well as a special `SctructuralSceneActorConfig` instance for each SSA. This objects holds additional information needed to 
 
 ### Creating Scenarios
 To create a scenario, we first create instances of the `ScenarioAttributeGroups` discussed above. Then we can create an instance of the `AutoSceneGenScenarioBuilder` class which requires the following parameters:
