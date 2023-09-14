@@ -43,7 +43,7 @@ As mentioned above, scenarios are composed of a collection of various attributes
   - `x`: The x-coordinate for the SSA [m]
   - `y`: The y-coordinate for the SSA [m]
   - `yaw`: The yaw angle for the SSA [deg]
-  - `scale`: The scale factor for the SSA (applies to all three dimensions) multilying the max_scale parameter for the particular SSA (see StructuralSceneActorConfig)
+  - `scale`: The scale factor for the SSA (applies to all three dimensions) multilying the max_scale parameter for the particular SSA (see `StructuralSceneActorConfig`)
 
 #### Textural Attributes
 
@@ -87,7 +87,7 @@ The `AutoSceneGenScenarioBuilder` class is the main class used to create scenari
 - `landscape_subdivisions`: The number of times the triangles in the nominal landscape mesh should be subdivided. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md#autoscenegenlandscape) actor for more details.
 - `landscape_border`: The minimum allowed amount of padding for the landscape border. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md#autoscenegenlandscape) actor for more details.
 - `ssa_attr`: The `StructuralSceneActorAttributes` instance to use
-- `ssa_config`: A list of `StructuralSceneActorConfig` objects for the various SSAs that can be placed in the scene
+- `ssa_config`: A list of `` objects for the various SSAs that can be placed in the scene
 - `b_ssa_casts_shadow`: Indicates if the SSAs cast a shadow in the game
 - `b_allow_collisions`: Indicate if simulation keeps running in the case of vehicle collisions
 - `txt_attr`: The `TexturalAttributes` instance to use
@@ -122,8 +122,8 @@ The AutoSceneGenClient ROS node provides the base functionality needed to intera
 
 The base class only requires the following parameters:
 - `node_name`: The name of the ROS node
-- `main_dir`: The main directory on your computer for storing data
-- `asg_client_name`: The name of the AutoSceneGenClient (this is different from the ROS node name and need not be the same)
+- `main_dir`: The main directory for storing data on your computer
+- `asg_client_name`: The AutoSceneGenClient's name, which is used for creating the appropriate ROS topics (this does not need to match the ROS node name)
 - `num_vehicle_nodes`: Number of AutoSceneGenVehicleNodes in the AutoScenegenVehicle's the autonomy stack
 - `num_workers`: Number of AutoSceneGenWorkers to keep track of
 - `base_wid`: The base, or starting, AutoSceneGenWorker ID
