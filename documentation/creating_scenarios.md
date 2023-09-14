@@ -36,6 +36,7 @@ This is the base class for creating scenarios. This platform currently only supp
 As mentioned above, scenarios are composed of a collection of various attributes. Before we can create a scenario in code, we must first define groups of scenario attributes (e.g., structural attributes, textural attributes, etc.), the types of attributes that each group contains, and the allowed value (or range of values) that each attribute can take on. The `ScenarioAttribute` class is the lowest level for defining any type of attribute, and takes as input the name of the attribute and the allowed value (or range of values). The `ScenarioAttributeGroup` class is a base class used for defining groups of attributes. All attribute groups that we define inherit from this class. This interface provides several base scenario attribute groups.
 
 #### Structural Scene Actor Attributes
+
 - Class Name: `StructuralSceneActorAttributes`
 - Description: Describes the geometric attributes related to SSAs. While we could make a separate class for each type of SSA, right now we choose the simple route of having only one group that applies to all SSAs.
 - Attributes:
@@ -45,6 +46,7 @@ As mentioned above, scenarios are composed of a collection of various attributes
   - `scale`: The scale factor for the SSA (applies to all three dimensions) multilying the max_scale parameter for the particular SSA (see StructuralSceneActorConfig)
 
 #### Textural Attributes
+
 - Class Name: `TexturalAttributes`
 - Description: Describes the textural attributes of the environment.
 - Attributes:
@@ -52,6 +54,7 @@ As mentioned above, scenarios are composed of a collection of various attributes
   - `sunlight_yaw`: The angle in which the sun is pointing in [deg]
  
 #### Operational Attributes
+
 - Class Name: `OperationalAttributes`
 - Description: Describes the operational attributes for the scenario.
 - Attributes:
@@ -68,7 +71,8 @@ As mentioned above, scenarios are composed of a collection of various attributes
   - `max_vehicle_pitch`: The maximum allowed pitch angle for the vehicle [deg]
 
 ### Structural Scene Actor Config
-When working with SSAs, we will need two types of objects: the `StructuralSceneActorAttributes` object discussed above and a `SctructuralSceneActorConfig` object. For every SSA we will need a `SctructuralSceneActorConfig` object that contains additional information needed to populate the scene. Creating a `SctructuralSceneActorConfig` requires the following parameters:
+
+When working with SSAs, we will need two types of objects: the `StructuralSceneActorAttributes` object discussed above and a `StructuralSceneActorConfig` object. For every SSA we will need a `StructuralSceneActorConfig` object that contains additional information needed to populate the scene. Creating a `StructuralSceneActorConfig` requires the following parameters:
 - `blueprint_directory`: The directory to find the Blueprint in the UE project, starts with "/Game/"
 - `blueprint_name`: The name of the Blueprint (excluding extensions)
 - `num_instances`: The number of instances that can be placed in the game
@@ -77,6 +81,7 @@ When working with SSAs, we will need two types of objects: the `StructuralSceneA
 The first four parameters are used by the AutoSceneGenClient node when populating the `RunScenario` request.
 
 ### Creating Scenarios
+
 The `AutoSceneGenScenarioBuilder` class is the main class used to create scenarios and it requires the following parameters:
 - `landscape_nominal_size`: The size of the nominal landscape in [m]. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md) actor for more details.
 - `landscape_subdivisions`: The number of times the triangles in the nominal landscape mesh should be subdivided. See documentation for the [AutoSceneGenLandscape](https://github.com/tsender/AutomaticSceneGeneration/blob/main/Documentation/actors.md#autoscenegenlandscape) actor for more details.
@@ -91,17 +96,95 @@ The `AutoSceneGenScenarioBuilder` class is the main class used to create scenari
 - `goal_obstacle_free_radius`: Obstacle-free radius [m] around the goal location
 
 The `AutoSceneGenScenarioBuilder` class provides a number of basic methods that may be useful in your own applications. The functions worth discussing are shown below:
-- `create_default_run_scenario_request(self)`: Calling this function will create and return an `auto_scene_gen_msgs/RunScenario` request using the default attribute values provided in the scene builder parameters.
-- `create_default_scene_description_msg(self)`: This function is internally called by `create_default_run_scenario_request()`.
-- `get_unreal_engine_run_scenario_request(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request)`: When we create the scene/scenario via code, we do so assuming a right-handed north-west-up coordinate frame with meters as the base positional unit of measurement. However, UE uses a left-handed coordinate system and uses centimeters. Calling this function will return the equivalent `RunScenario` request so that UE an properly create and run the scenario.
-- `get_unreal_engine_scene_description(self, scene_description: auto_scene_gen_msgs.SceneDescription)`: This function is called internally by `get_unreal_engine_run_scenario_request(...)`.
-- `is_scenario_request_feasible(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request)`: Since it is important to create scenarios that are feasible for the test system, it may be useful to have a custom function that evaluates if a given `RunScenario` request satisfies your feasibility criteria. In the base class this function simply returns true. But this function can be overriden in a child scenario builder class.
+- `create_default_run_scenario_request`
+  - Calling this function will create and return an `auto_scene_gen_msgs/RunScenario` request using the default attribute values provided in the scene builder parameters.
+- `create_default_scene_description_msg`:
+  - This function is internally called by `create_default_run_scenario_request` and creates a `auto_scene_gen_msgs/SceneDescription` with the default parameters.
+- `get_unreal_engine_run_scenario_request`:
+  - When we create the scene/scenario via code, we do so assuming a right-handed north-west-up coordinate frame with meters as the base positional unit of measurement. However, UE uses a left-handed coordinate system and uses centimeters. Calling this function will return the equivalent `RunScenario` request so that UE an properly create and run the scenario.
+- `get_unreal_engine_scene_description`:
+  - This function is called internally by `get_unreal_engine_run_scenario_request`, and performs the conversion on the `auto_scene_gen_msgs/SceneDescription` message instance passed to it.
+- `is_scenario_request_feasible`:
+  - Since it is important to create scenarios that are feasible for the test system, it may be useful to have a custom function that evaluates if a given `RunScenario` request satisfies your feasibility criteria. In the base class this function simply returns true. But this function can be overriden in a child scenario builder class.
 
 There are several other functions provided by the `AutoSceneGenScenarioBuilder` class that may be useful. Please look through the source code for their description. 
 
 Depending on your needs, you are welcome to add features to the UE4 plugin and to this interface. However, extending the scene building functionality requires that you are able to modify *all* components in the scene building pipeline, including:
-- The `AutoSceneGenWorker`
-- The `AutoSceneGenScenarioBuilder` and/or your new child class (including many of the provided functions)
+- The AutoSceneGenWorker
+- The AutoSceneGenScenarioBuilder and/or your new child class (including many of the provided functions)
 - The `auto_scene_gen_msgs/RunScenario` request definition in both the ROS and UE4 version of the `auto_scene_gen_msgs` package.
 
 ## AutoSceneGenClient Node
+
+The AutoSceneGenClient ROS node provides the base functionality needed to interact with the AutoSceneGenWorker that operates in Unreal Engine. Internally, this node manages a variety of things that allow you to seamlessly create various scenarios in Unreal Engine, observe and analyze the test vehicle's behavior from that scenario, and then repeat the process.
+
+### Creating an AutoSceneGenClient Node
+
+The base class only requires the following parameters:
+- `node_name`: The name of the ROS node
+- `main_dir`: The main directory on your computer for storing data
+- `asg_client_name`: The name of the AutoSceneGenClient (this is different from the ROS node name and need not be the same)
+- `num_vehicle_nodes`: Number of AutoSceneGenVehicleNodes in the AutoScenegenVehicle's the autonomy stack
+- `num_workers`: Number of AutoSceneGenWorkers to keep track of
+- `base_wid`: The base, or starting, AutoSceneGenWorker ID
+- `worker_class`: A class or subclass instance of AutoSceneGenWorkerRef, used for managing AutoSceneGenWorkers
+- `scenario_builder`: A class or subclass instance of AutoSceneGenScenarioBuilder, used for creating scenarios
+
+### ROS Objects
+
+Lists any publishers, subscribers, clients, and/or services monitored by this node. All instances of "asg_client" in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of "asg_workerX" are just place holders for the topic substring associated with an AutoSceneGenWorker.
+
+**Publishers:**
+- Client Status Pub:
+  - Topic: `/asg_client/status`
+  - Type: `auto_scene_gen_msgs/StatusCode`
+  - Description: Publishes the client node's status
+- Vehicle Node Operating Info Pub
+  - Topic: `/asg_client/vehicle_node_operating_info`
+  - Type: `auto_scene_gen_msgs/VehicleNodeOperatingInfo`
+  - Description: Publishes important operating information to all registered AutoSceneGenVehicleNodes
+- Scene Description Pubs (one for each worker)
+  - Topic: `/asg_workerX/scene_description`
+  - Type: `auto_scene_gen_msgs/SceneDescription`
+  - Description: Publishes the most recent scene description for the associated AutoSceneGenWorker
+
+**Subscribers:**
+- Worker Status Subs:
+  - Topic: `/asg_workerX/status`
+  - Type: `auto_scene_gen_msgs/StatusCode`
+  - Description: Subscribes to the associated AutoSceneGenWorker's status
+ 
+**Clients:**
+- Run Scenario Clients (one for each worker):
+  - Topic: `/asg_workerX/services/run_scenario`
+  - Type: `auto_scene_gen_msgs/RunScenario`
+  - Description: Requests a specific scenario for the AutoSceneGenWorker to create and execute
+ 
+**Services:**
+- Analyze Scenario Service:
+  - Topic: `/asg_client/services/analyze_scenario`
+  - Type: `auto_scene_gen_msgs/AnalyzeScenario`
+  - Description: Service for accepting `AnalyzeScenario` requests back from the AutoSceneGenWorkers
+- Register Vehicle Node Service:
+  - Topic: `/asg_client/services/register_vehicle_node`
+  - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
+  - Description: Service for AutoSceneGenVehicleNodes to register themselves with this client node
+- Unregister Vehicle Node Service:
+  - Topic: `/asg_client/services/unregister_vehicle_node`
+  - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
+  - Description: Service for AutoSceneGenVehicleNodes to unregister themselves with this client node
+- Notify Ready Service:
+  - Topic: `/asg_client/services/notify_ready`
+  - Type: `auto_scene_gen_msgs/NotifyReady`
+  - Description: Service for AutoSceneGenVehicleNodes to indicate to this client node that they are ready to proceed
+- Worker Issue Notification Service:
+  - Topic: `/asg_client/services/worker_issue_notification`
+  - Type: `auto_scene_gen_msgs/WorkerIssueNotification`
+  - Description: Service for AutoSceneGenWorkers to indicate to this client node of any issues they encountered (e.g., rosbrige interruption)
+
+### Workflow (TODO)
+
+1. Start the UE simulations.
+2. Launch the AutoSceneGenClient node. The node will follow its initialization procedure (create AutoSceneGenWorkerRefs, create various ROS objects, etc.).
+3. Launch the AutoSceneGenVehicleNodes for each AutoSceneGenVehicle.
+4. The AutoSceneGenClient node will recognize when
