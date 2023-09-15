@@ -118,9 +118,66 @@ Depending on your needs, you are welcome to add features to the UE4 plugin and t
 
 The AutoSceneGenClient ROS node provides the base functionality needed to interact with the AutoSceneGenWorker that operates in Unreal Engine. Internally, this node manages a variety of things that allow you to seamlessly create various scenarios in Unreal Engine, observe and analyze the test vehicle's behavior from that scenario, and then repeat the process.
 
-### Creating an AutoSceneGenClient Node
+### ROS Objects
 
-The base class only requires the following parameters:
+Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of `asg_workerX` are just place holders for the topic substring associated with an AutoSceneGenWorker (e.g., `asg_worker0`, `asg_worker1`, etc.)
+
+**Publishers:**
+- Client Status Pub
+  - Topic: `/<asg_client_name>/status`
+  - Type: `auto_scene_gen_msgs/StatusCode`
+  - Description: Publishes the client node's status
+- Vehicle Node Operating Info Pub
+  - Topic: `/<asg_client_name>/vehicle_node_operating_info`
+  - Type: `auto_scene_gen_msgs/VehicleNodeOperatingInfo`
+  - Description: Publishes important operating information to all registered AutoSceneGenVehicleNodes
+- Scene Description Pubs (one for each worker)
+  - Topic: `/<asg_workerX>/scene_description`
+  - Type: `auto_scene_gen_msgs/SceneDescription`
+  - Description: Publishes the most recent scene description for the associated AutoSceneGenWorker
+
+**Subscribers:**
+- Worker Status Subs
+  - Topic: `/<asg_workerX>/status`
+  - Type: `auto_scene_gen_msgs/StatusCode`
+  - Description: Subscribes to the associated AutoSceneGenWorker's status
+ 
+**Clients:**
+- Run Scenario Clients (one for each worker)
+  - Topic: `/<asg_workerX>/services/run_scenario`
+  - Type: `auto_scene_gen_msgs/RunScenario`
+  - Description: Requests a specific scenario for the AutoSceneGenWorker to create and execute
+ 
+**Services:**
+- Analyze Scenario Service
+  - Topic: `/<asg_client_name>/services/analyze_scenario`
+  - Type: `auto_scene_gen_msgs/AnalyzeScenario`
+  - Description: Service for accepting `AnalyzeScenario` requests back from the AutoSceneGenWorkers
+- Register Vehicle Node Service
+  - Topic: `/<asg_client_name>/services/register_vehicle_node`
+  - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
+  - Description: Service for AutoSceneGenVehicleNodes to register themselves with this client node
+- Unregister Vehicle Node Service
+  - Topic: `/<asg_client_name>/services/unregister_vehicle_node`
+  - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
+  - Description: Service for AutoSceneGenVehicleNodes to unregister themselves with this client node
+- Notify Ready Service
+  - Topic: `/<asg_client_name>/services/notify_ready`
+  - Type: `auto_scene_gen_msgs/NotifyReady`
+  - Description: Service for AutoSceneGenVehicleNodes to indicate to this client node that they are ready to proceed
+- Worker Issue Notification Service
+  - Topic: `/<asg_client_name>/services/worker_issue_notification`
+  - Type: `auto_scene_gen_msgs/WorkerIssueNotification`
+  - Description: Service for AutoSceneGenWorkers to indicate to this client node of any issues they encountered (e.g., rosbrige interruption)
+ 
+**Timers**
+- Main Loop Timer
+  - Timer Callback: `main_loop_timer_cb`
+  - Description: This is the main loop that runs until the node is destroyed. When it is running, it will publish the online status for the client, publish any vehicle node operating info for any AutoSceneGenVehicleNodes, publish the current scene description being ran in the managed AutoSceneGenWorkers, check/ensure the AutoSceneGenWorkers received their latest `RunScenario` request, and then call `main_step(wid: int)` and passes in the current worker ID being processed. The `main_step` function is what you will need to override and is your primary entry point for creating and analyzing scenarios. The `main_loop_timer_cb` function will cycle through all managed worker IDs so you don't have to.
+
+### Creating and Customizing the AutoSceneGenClient Node
+
+The `AutoSceneGenClient` class provided in `auto_scene_gen_core/cient_node.py` is the base client. You will need to create a child class that inherits from `AutoSceneGenClient` and then customize it to your needs. The base class requires the following parameters:
 - `node_name`: The name of the ROS node
 - `main_dir`: The main directory for storing data on your computer
 - `asg_client_name`: The AutoSceneGenClient's name, which is used for creating the appropriate ROS topics (this does not need to match the ROS node name)
@@ -130,61 +187,33 @@ The base class only requires the following parameters:
 - `worker_class`: A class or subclass instance of AutoSceneGenWorkerRef, used for managing AutoSceneGenWorkers
 - `scenario_builder`: A class or subclass instance of AutoSceneGenScenarioBuilder, used for creating scenarios
 
-### ROS Objects
+Due to the structure of the `AutoSceneGenClient` class, you can only customize what happens inside the constructor and inside the `main_step` function. The `main_step(wid: int)` function is called in each iteration that `main_loop_timer_cb` runs and is passed the ID of the current AutoSceneGenWorker being processed. The `main_step` function is where you should place your main processing code for creating and analyzing scenarios with the various workers. Based on how the various components in the entire workflow interact, there is a recommended way to configure the `main_step` function so that your code will operate as intended. Below is the minimilistic recommendation (you must follow this framework for everything to work proprly):
+```
+def main_step(wid: int):
+  worker = self.workers[wid]
+  
+  # Worker must be registered
+  if not worker.b_registered_with_asg_client:
+    return
 
-Lists any publishers, subscribers, clients, and/or services monitored by this node. All instances of "asg_client" in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of "asg_workerX" are just place holders for the topic substring associated with an AutoSceneGenWorker.
+  # Ensure all vehicle nodes are registered
+  if len(worker.registered_vehicle_nodes) != self.num_vehicle_nodes:
+    return
 
-**Publishers:**
-- Client Status Pub:
-  - Topic: `/asg_client/status`
-  - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Publishes the client node's status
-- Vehicle Node Operating Info Pub
-  - Topic: `/asg_client/vehicle_node_operating_info`
-  - Type: `auto_scene_gen_msgs/VehicleNodeOperatingInfo`
-  - Description: Publishes important operating information to all registered AutoSceneGenVehicleNodes
-- Scene Description Pubs (one for each worker)
-  - Topic: `/asg_workerX/scene_description`
-  - Type: `auto_scene_gen_msgs/SceneDescription`
-  - Description: Publishes the most recent scene description for the associated AutoSceneGenWorker
+  # Ensure all vehicle nodes are ready to proceed before doing anything
+  if not self.are_all_vehicle_nodes_ready(wid):
+    return
 
-**Subscribers:**
-- Worker Status Subs:
-  - Topic: `/asg_workerX/status`
-  - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the associated AutoSceneGenWorker's status
- 
-**Clients:**
-- Run Scenario Clients (one for each worker):
-  - Topic: `/asg_workerX/services/run_scenario`
-  - Type: `auto_scene_gen_msgs/RunScenario`
-  - Description: Requests a specific scenario for the AutoSceneGenWorker to create and execute
- 
-**Services:**
-- Analyze Scenario Service:
-  - Topic: `/asg_client/services/analyze_scenario`
-  - Type: `auto_scene_gen_msgs/AnalyzeScenario`
-  - Description: Service for accepting `AnalyzeScenario` requests back from the AutoSceneGenWorkers
-- Register Vehicle Node Service:
-  - Topic: `/asg_client/services/register_vehicle_node`
-  - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Service for AutoSceneGenVehicleNodes to register themselves with this client node
-- Unregister Vehicle Node Service:
-  - Topic: `/asg_client/services/unregister_vehicle_node`
-  - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Service for AutoSceneGenVehicleNodes to unregister themselves with this client node
-- Notify Ready Service:
-  - Topic: `/asg_client/services/notify_ready`
-  - Type: `auto_scene_gen_msgs/NotifyReady`
-  - Description: Service for AutoSceneGenVehicleNodes to indicate to this client node that they are ready to proceed
-- Worker Issue Notification Service:
-  - Topic: `/asg_client/services/worker_issue_notification`
-  - Type: `auto_scene_gen_msgs/WorkerIssueNotification`
-  - Description: Service for AutoSceneGenWorkers to indicate to this client node of any issues they encountered (e.g., rosbrige interruption)
+  # Create a scenario...
 
-### Workflow (TODO)
+  # Submit the RunScenario request
+  self.submit_run_scenario_request(wid)
 
-1. Start the UE simulations.
-2. Launch the AutoSceneGenClient node. The node will follow its initialization procedure (create AutoSceneGenWorkerRefs, create various ROS objects, etc.).
-3. Launch the AutoSceneGenVehicleNodes for each AutoSceneGenVehicle.
-4. The AutoSceneGenClient node will recognize when
+  # Block until ready to analyze scenario
+  if worker.b_waiting_for_analyze_scenario_request:
+    return
+
+  # Analyze the latest scenario...
+
+  # Check for some stopping criterion...
+```
