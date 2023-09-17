@@ -120,7 +120,7 @@ The AutoSceneGenClient ROS node provides the base functionality needed to intera
 
 ### ROS Objects
 
-Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of `asg_workerX` are just place holders for the topic substring associated with an AutoSceneGenWorker (e.g., `asg_worker0`, `asg_worker1`, etc.)
+Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of `<asg_workerX>` are just place holders for the topic substring associated with an AutoSceneGenWorker (e.g., `asg_worker0`, `asg_worker1`, etc.)
 
 **Publishers:**
 - Client Status Pub
