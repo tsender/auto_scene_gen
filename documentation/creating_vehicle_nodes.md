@@ -4,71 +4,75 @@ Once you know how to [create scenarios](https://github.com/tsender/auto_scene_ge
 
 ## ROS Objects
 
-Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the AutoSceneGenClient's name from the `asg_client_name` parameter. All instances of `asg_workerX` are just place holders for the topic substring associated with an AutoSceneGenWorker (e.g., `asg_worker0`, `asg_worker1`, etc.).
+Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the AutoSceneGenClient's name from the `asg_client_name` parameter. All instances of `<wid>` get replaced by the ID from the `wid` parameter. All instances of `<vehicle_name>` get replaced with the name from the `vehicle_name` parameter.
 
 **Parameters**
 - `vehicle_name`: The name given to the corresponding AutoSceneGenVehicle inside Unreal Engine
 - `wid`: The AutoSceneGenWorker ID for the associated AutoSceneGenVehicle
 - `asg_client_name`: The name of the AutoSceneGenClient managing the associated worker
-- `asg_client_ip_addr`: The IP address of the computer where the AutoSceneGenClient resides. An empty string means the client is on the same machine.
-- `ssh_username`: The SSH username for sending files between this computer and the computer where the AutoSceneGenClient lives. An empty string means to use the current username.
+- `asg_client_ip_addr`: The IP address of the computer where the AutoSceneGenClient resides. Leave empty if the client is on the same machine.
+- `ssh_username`: The SSH username for sending files between this computer and the computer where the AutoSceneGenClient lives. If empty, then we will use the current username.
 - `b_debug_mode`: In case you want to test some of your vehcle's code and want the node to be free from this interface, then set this flag to true. Note: this is still a bit of an experimental feature, and it may get improved or removed in the future.
 
 **Subscribers:**
 - Clock Sub
-  - Topic: `/clock<wid>` (Here, the `<wid>` gets replaced by the value form the `wid` parameter)
+  - Topic: `/clock<wid>`
   - Type: `rosgraph_msgs/Clock`
   - Description: Subscribes to the clock topic coming from the ROSIntegration plugin in Unreal Engine where the AutoSceneGenVehicle is
-- AutoSceneGenClient Status Sub
+- Client Status Sub
   - Topic: `/<asg_client_name>/status`
   - Type: `auto_scene_gen_msgs/StatusCode`
   - Description: Subscribes to the AutoSceneGenClient's status
-- AutoSceneGenClient Status Sub
-  - Topic: `/<asg_client_name>/status`
+- Worker Status Sub
+  - Topic: `/asg_worker<wid>/status`
   - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the AutoSceneGenClient's status
-- AutoSceneGenClient Status Sub
-  - Topic: `/<asg_client_name>/status`
-  - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the AutoSceneGenClient's status
-- AutoSceneGenClient Status Sub
-  - Topic: `/<asg_client_name>/status`
-  - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the AutoSceneGenClient's status
-- AutoSceneGenClient Status Sub
-  - Topic: `/<asg_client_name>/status`
-  - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the AutoSceneGenClient's status
-
-**Clients:**
-- Run Scenario Clients (one for each worker)
-  - Topic: `/<asg_workerX>/services/run_scenario`
-  - Type: `auto_scene_ge_msgs/RunScenario`
-  - Description: Requests a specific scenario for the AutoSceneGenWorker to create and execute
+  - Description: Subscribes to the AutoSceneGenWorker's status
+- Vehicle Status Sub
+  - Topic: `/<asg_client_name>/<vehicle_name>/status`
+  - Type: `auto_scene_gen_msgs/VehicleStatus`
+  - Description: Subscribes to the AutoSceneGenVehicle's status
+- Vehicle Node Operating Info Sub
+  - Topic: `/<asg_client_name>/vehicle_node_operating_info`
+  - Type: `auto_scene_gen_msgs/VehicleNodeOperatingInfo`
+  - Description: Subscribes to the vehicle node operating info published by the AutoSceneGenClient
+- Scene Description Sub
+  - Topic: `/asg_worker<wid>/scene_description`
+  - Type: `auto_scene_gen_msgs/SceneDescription`
+  - Description: Subscribes to the current scene description being ran on the AutoSceneGenWorker
  
-**Services:**
-- Analyze Scenario Service
-  - Topic: `/<asg_client_name>/services/analyze_scenario`
-  - Type: `auto_scene_gen_msgs/AnalyzeScenario`
-  - Description: Service for accepting `AnalyzeScenario` requests back from the AutoSceneGenWorkers
-- Register Vehicle Node Service
+**Clients:**
+- Register Node Client
   - Topic: `/<asg_client_name>/services/register_vehicle_node`
   - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Service for AutoSceneGenVehicleNodes to register themselves with this client node
-- Unregister Vehicle Node Service
+  - Description: Client for registering with the AutoSceneGenClient
+- Unregister Node Client
   - Topic: `/<asg_client_name>/services/unregister_vehicle_node`
   - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Service for AutoSceneGenVehicleNodes to unregister themselves with this client node
-- Notify Ready Service
+  - Description: Client for unregistering with the AutoSceneGenClient
+- Notify Ready Client
   - Topic: `/<asg_client_name>/services/notify_ready`
   - Type: `auto_scene_gen_msgs/NotifyReady`
-  - Description: Service for AutoSceneGenVehicleNodes to indicate to this client node that they are ready to proceed
-- Worker Issue Notification Service
-  - Topic: `/<asg_client_name>/services/worker_issue_notification`
-  - Type: `auto_scene_gen_msgs/WorkerIssueNotification`
-  - Description: Service for AutoSceneGenWorkers to indicate to this client node of any issues they encountered (e.g., rosbrige interruption)
+  - Description: Client for notifying to the AutoSceneGenClient that this vehicle node is ready. Techncally, we send service requests, but we treat these requests as notifications.
  
 **Timers**
-- Main Loop Timer
-  - Timer Callback: `main_loop_timer_cb`
-  - Description: This is the main loop that runs until the node is destroyed. When it is running, it will publish the online status for the client, publish any vehicle node operating info for any AutoSceneGenVehicleNodes, publish the current scene description being ran in the managed AutoSceneGenWorkers, check/ensure the AutoSceneGenWorkers received their latest `RunScenario` request, and then call `main_step(wid: int)` and passes in the current worker ID being processed. The `main_step` function is what you will need to override and is your primary entry point for creating and analyzing scenarios. The `main_loop_timer_cb` function will cycle through all managed worker IDs so you don't have to.
+- Register Node Timer
+  - Timer Callback: `register_node_timer_cb`
+  - Description: This callback runs every second and ensures that the vehicle node is registered with the AutoSceneGenClient (once it comes online) and then makes sure that its `NotifyReady` requests are received.
+
+### General Node Workflow
+
+Assuming that the `b_debug_mode` parameter is set to false, then the veicle node's operation will be as follows:
+1. Load ROS parameters and create ROS objects (see above).
+2. Wait for the AutoSceneGenClient to come online.
+3. Register itself with the AutoSceneGenClient.
+4. Send an initial `NotifyReady` request to the AutoSceneGenClient and verify it was received.
+5. Follow any custom callbacks that you created and function like a normal node.
+6. When the AutoSceneGenVehicle
+
+### Customizing the Node
+
+
+### Logging
+
+
+### Clock Time
