@@ -88,6 +88,10 @@ if (!vehicleOK())
   return;
 ```
 
+### Logging
+
+The `AutoSceneGenVehicleNode` class provides a logging function that makes it easier to log information to the console and to a separate log file. The log message will always be logged via the ROS logger and by default will be written to the log file. All messages are prepended with a date, timestamp and log level, an example is `[2023-09-17 23:30:09.599643] [INFO]`. See the `log` function for more details.
+
 ### The Reset Procedure
 
 Once the simulation terminates, all AutoSceneGenVehicleNodes must reset their internal state so they can be ready for the next simulation. Internally, the vehicle nodes monitor the vehicle's "OK status". The OK status returns true if all of the following conditions are true:
@@ -106,7 +110,8 @@ Once the OK status changes to false, the reset procedure is triggered (all of th
 4. The `reset()` function will be called in which the vehicle node should reset all internal variables that need to be reset.
 5. The vehicle node will send a `NotifyReady` request to the client informing that it is ready for the next scenario.
 
-## Logging
+### Saving Node Data
 
+Since you may likely wish to save data to a folder for later analysis, the `AutoSceneGenVehicleNode` class provides a function dedicated to letting you save any daya you need.
 
 ## Clock Time
