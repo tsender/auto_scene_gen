@@ -59,20 +59,54 @@ Lists any publishers, subscribers, clients, services, and or timers monitored by
   - Timer Callback: `register_node_timer_cb`
   - Description: This callback runs every second and ensures that the vehicle node is registered with the AutoSceneGenClient (once it comes online) and then makes sure that its `NotifyReady` requests are received.
 
-### General Node Workflow
+## General Node Workflow
 
 Assuming that the `b_debug_mode` parameter is set to false, then the veicle node's operation will be as follows:
 1. Load ROS parameters and create ROS objects (see above).
 2. Wait for the AutoSceneGenClient to come online.
-3. Register itself with the AutoSceneGenClient.
-4. Send an initial `NotifyReady` request to the AutoSceneGenClient and verify it was received.
-5. Follow any custom callbacks that you created and function like a normal node.
-6. When the AutoSceneGenVehicle
+3. Register with the AutoSceneGenClient.
+4. Send a `NotifyReady` request to the AutoSceneGenClient and verify it was received.
+5. Follow any custom callbacks that you created and function like a normal node (see ).
+6. Perform a reset procedure when the AutoSceneGenVehicle is disabled (see below).
+7. Go back to step 4 and repeat until the node is destroyed.
 
 ### Customizing the Node
 
+The `AutoSceneGenVehicleNode` is the base class from which all of your ROS nodes will inherit from because this node abstracts away all of the overhead needed to interactwith the entire AutoSceneGen ecosystem. For the most part, you can treat your child classes like regular ROS nodes - you can add more parameters in the constructor and create however many callbacks you need in each node.
 
-### Logging
+Since this entire platform is built on creating an automated system in which scenarios can be created/executed repeatedly without forcing the user to restart Unreal Engine or their ROS nodes (unless a critical problem arises), part of the overhead embedded in this interfaces does result in some minor modifications to your ROS nodes. The following codeblock must be placed at the very top of every callback to ensure your code does not execute prematurely:
+
+Python:
+```
+if not self.vehicle_ok():
+  return
+```
+
+C++:
+```
+if (!vehicleOK())
+  return;
+```
+
+### The Reset Procedure
+
+Once the simulation terminates, all AutoSceneGenVehicleNodes must reset their internal state so they can be ready for the next simulation. Internally, the vehicle nodes monitor the vehicle's "OK status". The OK status returns true if all of the following conditions are true:
+- The Vehicle node is registered with the client
+- The vehicle node's most recent `NotifyReady` request was proceesed by the client
+- The vehicle in Unreal Engine is enabled
+- The client has informed the vehicle nodes that is okay for them to run
+
+Once the OK status changes to false, the reset procedure is triggered (all of this takes place inside the vehicle status callback):
+1. The vehicle disabled timestamp is recorded
+2. If the incoming vehicle status message was not preempted (i.e, the simulation was not aborted due to a detected issue), then:
+   - The node will have the chance to save any internal data to a save directory on the computer where the client resides.
+   - The node will be allowed to request a rerun of the scenario if it detected a potential problem that should not have occurred (this is left to the user to decide).
+   - The vehicle nodes log file will get saved to the save directory on the computer where the client resides.
+3. The vehicle node's temporary save directory will be reset.
+4. The `reset()` function will be called in which the vehicle node should reset all internal variables that need to be reset.
+5. The vehicle node will send a `NotifyReady` request to the client informing that it is ready for the next scenario.
+
+## Logging
 
 
-### Clock Time
+## Clock Time
