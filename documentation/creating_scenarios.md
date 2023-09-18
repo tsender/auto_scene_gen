@@ -12,24 +12,31 @@ Whether we are discussing the scene, environment, or scenario, all of these obje
 - Textural Attributes: These attributes enhance the visual realism of the environment by describing visual effects. These attributes include weather intensities.
 - Operational Attributes: These attributes describe operational constraints on the vehicle's behavior  (e.g., go/no-go zones, speed ranges, etc.), can define the vehicle's task, as well as describe the behavior of other agents.
 
+## Abbreviations
+
+Instead of always writing the prefix "AutoSceneGen", we will often use a shorthand when referring to the various components in the AutoSceneGen ecosystem. The shorthand only applies if it makes based on the context.
+- Worker: Refers to an instance of an AutoSceneGenWorker, which resides in Unreal Engine.
+- Vehicle: Refers to an instance of an AutoSceneGenVehicle, which resides in Unreal Engine.
+- Vehicle Node: Refers to an instance of an AutoSceneGenVehicleNode, which is a Python or C++ ROS node within the autonomy stack controlling an AutoSceneGenVehicle.
+
 ## AutoSceneGenWorkerRef
 
-Every AutoSceneGenWorker that we interact with via ROS needs a *reference* or a *proxy* object to keep track of important information regarding what that worker's status is and what it is doing. Below is a list of just some of the items this object keeps track of:
+Every AutoSceneGenWorker that we interact with via ROS needs a *reference* or a *proxy* object to keep track of important information regarding what that worker's status is and what it is doing. Below is a list of some of the items this object keeps track of:
 - The corresponding worker ID
 - The worker's status
-- If the worker is registered with the AutoSceneGenClient
-- The AutoSceneGenVehicleNodes registered to control the corresponding AutoSceneGenVehicle
-- If the AutoSceneGenVehicleNodes are ready to proceed (i.e., their internal states have been reset)
+- If the worker is registered with the client
+- The vehicle nodes registered to control the corresponding vehicle
+- If the vehicle nodes are ready to proceed (i.e., their internal states have been reset)
 - The current scenario number being run
 - The latest RunScenario request the worker is using
 - The AnalyzeScenario request resulting from running the requested scenario
 - If the worker is actively running a scenario
 
-Please refer to the `AutoSceneGenWorkerRef` class in auto_scene_gen_core/client_node.py for more details. You may also create child classes if you need to add additional functionality for your own needs.
+Please refer to the `AutoSceneGenWorkerRef` class in `auto_scene_gen_core/client_node.py` for more details. You may also create child classes if you need to add additional functionality for your own needs.
 
 ## AutoSceneGenScenarioBuilder
 
-This is the base class for creating scenarios. This platform currently only supports creating scenarios for a navigation task for a single vehicle, and all scenarios must be defined via the ROS interface. All classes mentioned in this section can be found in auto_scene_gen_core/scenario_builder.py, and all message/service definitions can be found in LINK.
+This is the base class for creating scenarios. This platform currently only supports creating scenarios for a navigation task for a single vehicle, and all scenarios must be defined via the ROS interface. All classes mentioned in this section can be found in `auto_scene_gen_core/scenario_builder.py`, and all message/service definitions can be found in LINK.
 
 ### Scenario Attributes
 
@@ -120,60 +127,60 @@ The AutoSceneGenClient ROS node provides the base functionality needed to intera
 
 ### ROS Objects
 
-Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of `<asg_workerX>` are just place holders for the topic substring associated with an AutoSceneGenWorker (e.g., `asg_worker0`, `asg_worker1`, etc.)
+Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the name provided by the `asg_client_name` parameter. All instances of `<wid>` are place holders for a worker ID.
 
 **Publishers:**
 - Client Status Pub
   - Topic: `/<asg_client_name>/status`
   - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Publishes the client node's status
+  - Description: Publishes the client node's status.
 - Vehicle Node Operating Info Pub
   - Topic: `/<asg_client_name>/vehicle_node_operating_info`
   - Type: `auto_scene_gen_msgs/VehicleNodeOperatingInfo`
-  - Description: Publishes important operating information to all registered AutoSceneGenVehicleNodes
+  - Description: Publishes important operating information to all registered vehicle nodes.
 - Scene Description Pubs (one for each worker)
-  - Topic: `/<asg_workerX>/scene_description`
+  - Topic: `/asg_worker<wid>/scene_description`
   - Type: `auto_scene_gen_msgs/SceneDescription`
-  - Description: Publishes the most recent scene description for the associated AutoSceneGenWorker
+  - Description: Publishes the most recent scene description for the associated worker.
 
 **Subscribers:**
 - Worker Status Subs
-  - Topic: `/<asg_workerX>/status`
+  - Topic: `/asg_worker<wid>/status`
   - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the associated AutoSceneGenWorker's status
+  - Description: Subscribes to the associated worker's status.
  
 **Clients:**
 - Run Scenario Clients (one for each worker)
-  - Topic: `/<asg_workerX>/services/run_scenario`
+  - Topic: `/asg_worker<wid>/services/run_scenario`
   - Type: `auto_scene_gen_msgs/RunScenario`
-  - Description: Requests a specific scenario for the AutoSceneGenWorker to create and execute
+  - Description: Requests a specific scenario for the worker to create and execute.
  
 **Services:**
 - Analyze Scenario Service
   - Topic: `/<asg_client_name>/services/analyze_scenario`
   - Type: `auto_scene_gen_msgs/AnalyzeScenario`
-  - Description: Service for accepting `AnalyzeScenario` requests back from the AutoSceneGenWorkers
+  - Description: Service for accepting `AnalyzeScenario` requests back from the workers.
 - Register Vehicle Node Service
   - Topic: `/<asg_client_name>/services/register_vehicle_node`
   - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Service for AutoSceneGenVehicleNodes to register themselves with this client node
+  - Description: Service for vehicle nodes to register themselves with the client node.
 - Unregister Vehicle Node Service
   - Topic: `/<asg_client_name>/services/unregister_vehicle_node`
   - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Service for AutoSceneGenVehicleNodes to unregister themselves with this client node
+  - Description: Service for vehicle nodes to unregister themselves with the client node.
 - Notify Ready Service
   - Topic: `/<asg_client_name>/services/notify_ready`
   - Type: `auto_scene_gen_msgs/NotifyReady`
-  - Description: Service for AutoSceneGenVehicleNodes to indicate to this client node that they are ready to proceed
+  - Description: Service for vehicle nodes to indicate to the client node that they are ready to proceed.
 - Worker Issue Notification Service
   - Topic: `/<asg_client_name>/services/worker_issue_notification`
   - Type: `auto_scene_gen_msgs/WorkerIssueNotification`
-  - Description: Service for AutoSceneGenWorkers to indicate to this client node of any issues they encountered (e.g., rosbrige interruption)
+  - Description: Service for workers to indicate to the client node of any issues they encountered (e.g., rosbrige interruption).
  
 **Timers**
 - Main Loop Timer
   - Timer Callback: `main_loop_timer_cb`
-  - Description: This is the main loop that runs until the node is destroyed. When it is running, it will publish the online status for the client, publish any vehicle node operating info for any AutoSceneGenVehicleNodes, publish the current scene description being ran in the managed AutoSceneGenWorkers, check/ensure the AutoSceneGenWorkers received their latest `RunScenario` request, and then call `main_step(wid: int)` and passes in the current worker ID being processed. The `main_step` function is what you will need to override and is your primary entry point for creating and analyzing scenarios. The `main_loop_timer_cb` function will cycle through all managed worker IDs so you don't have to.
+  - Description: This is the main loop that runs until the node is destroyed. When it is running, it will publish the online status for the client, publish any vehicle node operating info for any vehicle nodes, publish the current scene description being ran in the managed workers, check/ensure the workers received their latest `RunScenario` request, and then call `main_step(wid: int)` and passes in the current worker ID being processed. The `main_step` function is what you will need to override and is your primary entry point for creating and analyzing scenarios. The `main_loop_timer_cb` function will cycle through all managed worker IDs so you don't have to.
 
 ### Creating and Customizing the AutoSceneGenClient Node
 
@@ -187,7 +194,7 @@ The `AutoSceneGenClient` class provided in `auto_scene_gen_core/cient_node.py` i
 - `worker_class`: A class or subclass instance of AutoSceneGenWorkerRef, used for managing AutoSceneGenWorkers
 - `scenario_builder`: A class or subclass instance of AutoSceneGenScenarioBuilder, used for creating scenarios
 
-Due to the structure of the `AutoSceneGenClient` class, you can only customize what happens inside the constructor and inside the `main_step` function. The `main_step(wid: int)` function is called in each iteration that `main_loop_timer_cb` runs and is passed the ID of the current AutoSceneGenWorker being processed. The `main_step` function is where you should place your main processing code for creating and analyzing scenarios with the various workers. Based on how the various components in the entire workflow interact, there is a recommended way to configure the `main_step` function so that your code will operate as intended. Below is the minimilistic recommendation (you must follow this framework for everything to work proprly):
+Due to the structure of the `AutoSceneGenClient` class, you can only customize what happens inside the constructor and inside the `main_step` function. The `main_step(wid: int)` function is called in each iteration that `main_loop_timer_cb` runs and is passed the ID of the current AutoSceneGenWorker being processed. The `main_step` function is where you should place your main processing code for creating and analyzing scenarios with the various workers. Based on how the various components in the entire workflow interact, there is a recommended way to configure the `main_step` function so that your code will operate as intended. Below is the minimilistic recommendation (you must follow this framework for everything to work properly):
 ```
 def main_step(wid: int):
   worker = self.workers[wid]
@@ -217,3 +224,13 @@ def main_step(wid: int):
 
   # Check for some stopping criterion...
 ```
+
+### Saving Vehicle Node Data
+
+In a number of situations, you will want your vehicle nodes to save their data so you can later analyze the data, create plots/figures, etc. The `AutoSceneGenWorkerRef` class has two variables that you can set to control where your vehicle nodes save their data and to what extent. It is recommended that you set these variables before you submit each `RunScenario` request to ensure the vehicle nodes receive the updated information in their `auto_scene_gen_msgs/VehicleNodeOperatingInfo` messages.
+- `vehicle_node_save_dir`: The directory for the vehicle nodes associated with this worker's vehicle to save their data to. The directory must be on the same computer where the client resides and you should make sure it exists. Leave the string empty if you do not want the vehicle nodes to save any data.
+- `b_save_minimal`: In some cases, you may want your vehicle nodes to save a lot of data so you can observe all of the decisions that the autonomy stack made (e.g., image classifications, LiDAR point clouds, etc.). However, saving lots of data consumes a lof of time and decreases the number of scenarios that can be run in a given period (becasue the client must wait for every vehicle node to submit a `NotifyReady` request before it can proceed). This variable gives you control over how much data you may want your vehicle nodes to save. Setting the variable to true means you want your vehicle nodes to only save the least amount of data. Setting this variable to false measn you want your nodes to save as much data as you desire (keep in mind this incurs a long waiting time before you can run another scenario).
+
+### Logging
+
+The AutoSceneGenClient makes extensive use of logging to help you identify potential errors. We provide a custom `log` function that allows you to log messages to the console and to a separate log file. The base class creates a log file at the file path `<main_dir>/asg_log.txt` where `<main_dir>` is replaced by the directory assigned to the client in the constructor. All messages are prepended with a date, timestamp, and log level, for example `[2023-09-17 23:30:09.599643] [INFO]`. Most operations within the base class write their messages to this log file, and it is recommended for you to do the same in your child class. Note, these log files can easily reach 10000+ or 100000+ lines, depending on how many scenarios you run and how much additional logging you add.
