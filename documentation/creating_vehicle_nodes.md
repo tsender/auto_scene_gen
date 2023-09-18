@@ -2,6 +2,13 @@
 
 Once you know how to [create scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md) using the provided ROS interface, you will then want to create ROS nodes that can control the AutoSceneGenVehicle operating in Unreal Engine. Because we expect that you will be creating many different scenarios, one after the other, and do not want to have to restart your vehicle nodes each time to reset them, we developed a special vehicle node, an AutoSceneGenVehicleNode, that can seamlessly interact with an AutoSceneGenWorker (and its corresponding AutoSceneGenVehicle), and the correpsonding AutoSceneGenClient. To offer the most flexibility, we provide both a Python and a C++ implementation for the AutoSceneGenVehicleNode, and we will provide some templated code demonstrating how to properly work with these classes.
 
+## Abbreviations
+
+Instead of always writing the prefix "AutoSceneGen", we will often use a shorthand when referring to the various components in the AutoSceneGen ecosystem. The shorthand only applies if it makes based on the context.
+- Worker: Refers to an instance of an AutoSceneGenWorker, which resides in Unreal Engine.
+- Vehicle: Refers to an instance of an AutoSceneGenVehicle, which resides in Unreal Engine.
+- Vehicle Node: Refers to an instance of an AutoSceneGenVehicleNode, which is a Python or C++ ROS node within the autonomy stack controlling an AutoSceneGenVehicle.
+
 ## ROS Objects
 
 Lists any publishers, subscribers, clients, services, and or timers monitored by this node. All instances of `<asg_client_name>` in the below topic names get replaced with the AutoSceneGenClient's name from the `asg_client_name` parameter. All instances of `<wid>` get replaced by the ID from the `wid` parameter. All instances of `<vehicle_name>` get replaced with the name from the `vehicle_name` parameter.
@@ -90,7 +97,23 @@ if (!vehicleOK())
 
 ### Logging
 
-The `AutoSceneGenVehicleNode` class provides a logging function that makes it easier to log information to the console and to a separate log file. The log message will always be logged via the ROS logger and by default will be written to the log file. All messages are prepended with a date, timestamp and log level, an example is `[2023-09-17 23:30:09.599643] [INFO]`. See the `log` function for more details.
+The `AutoSceneGenVehicleNode` class provides a logging function that makes it easier to log information to the console and to a separate log file. The log message will always be logged via the ROS logger and by default will be written to the log file. All messages are prepended with a date, timestamp, and log level, for example `[2023-09-17 23:30:09.599643] [INFO]`. See the `log` function for more details. The base class will create a temporary log file and it will automatically be saved to the save directory on the client's computer.
+
+### Saving Node Data
+
+In a number of situations, you will want your vehicle nodes to save their data so you can later analyze the data, create plots/figures, etc. The `AutoSceneGenVehicleNode` class provides a `save_node_data` function that automatically gets called during the reset process (see below) allowing you to save any data before the node's internal state is reset. The `AutoSceneGenVehicleNode` class also contains three variables that will be needed when saving your data. Of these variables, `save_dir` and `b_save_minimal` are set by the client.
+- `save_dir`: This string denotes the directory on the client's computer where all of this node's data will be saved to.
+- `temp_save_dir`: This string denotes a temporary directory on the vehicle nodes' computer where it can save data to temporarily before copying it to the `save_dir` directory on the client computer. This will come in handy when the vehicle node does not reside on the same computer as the client.
+- `b_save_minimal`: This boolean indicates how much data the vehicle node should save. Even though you may wish to save as much data as possible, saving lage data files consumes a lot of time and creates a bottleneck as it holds up the client from running another scenario until the node finihes saving all of its data. Hence, we provide the option (if you choose to use it) to let you specify how much data you wish to save. If this value is true, then the node should only save the least amount of data necessry for your application. If the value is false, then it can save as much data as you need.
+
+For Python vehicle nodes, you may find the following functions to be helpful:
+- `save_file_on_remote_asg_client`
+- `copy_file_from_remote_asg_client`
+- `save_pickle_object_on_asg_client`
+- `load_pickle_object_from_asg_client`
+
+For C++ vehicle nodes, you may find the following functions to be helpful:
+- `save_file_on_remote_asg_client`
 
 ### The Reset Procedure
 
@@ -110,7 +133,7 @@ Once the OK status changes to false, the reset procedure is triggered (all of th
 4. The `reset()` function will be called in which the vehicle node should reset all internal variables that need to be reset.
 5. The vehicle node will send a `NotifyReady` request to the client informing that it is ready for the next scenario.
 
-### Saving Node Data
+### Requesting a Rerun
 
 Since you may likely wish to save data to a folder for later analysis, the `AutoSceneGenVehicleNode` class provides a function dedicated to letting you save any daya you need.
 
