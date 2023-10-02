@@ -1,10 +1,11 @@
 # Creating and Working with AutoSceneGenVehicleNodes
 
-Once you know how to [create scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md) using the provided ROS interface, you will then want to create ROS nodes that can control the AutoSceneGenVehicle operating in Unreal Engine. Because we expect that you will be creating many different scenarios, one after the other, and do not want to have to restart your vehicle nodes each time to reset them, we developed a special vehicle node, an AutoSceneGenVehicleNode, that can seamlessly interact with an AutoSceneGenWorker (and its corresponding AutoSceneGenVehicle), and the correpsonding AutoSceneGenClient. To offer the most flexibility, we provide both a Python and a C++ implementation for the AutoSceneGenVehicleNode, and we will provide some templated code demonstrating how to properly work with these classes.
+Once you know how to [create scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md) using the provided ROS interface, you will then want to create ROS nodes that can control the AutoSceneGenVehicle operating in Unreal Engine. Because we expect that you will be creating many different scenarios, one after the other, and do not want to have to restart your vehicle nodes each time to reset them, we developed a special vehicle node, called an AutoSceneGenVehicleNode, that can seamlessly interact with an AutoSceneGenVehicle, the corresponding AutoSceneGenWorker, and the correpsonding AutoSceneGenClient. To offer the most flexibility, we provide both a Python and a C++ implementation for the AutoSceneGenVehicleNode, and we will provide some templated code demonstrating how to properly work with these classes.
 
 ## Abbreviations
 
 Instead of always writing the prefix "AutoSceneGen", we will often use a shorthand when referring to the various components in the AutoSceneGen ecosystem. The shorthand only applies if it makes based on the context.
+- Client: Refers to an AutoSceneGenClient, which is a Python ROS node that determines the scenarios one or more AutoSceneGenWorkers should run.
 - Worker: Refers to an instance of an AutoSceneGenWorker, which resides in Unreal Engine.
 - Vehicle: Refers to an instance of an AutoSceneGenVehicle, which resides in Unreal Engine.
 - Vehicle Node: Refers to an instance of an AutoSceneGenVehicleNode, which is a Python or C++ ROS node within the autonomy stack controlling an AutoSceneGenVehicle.
@@ -19,62 +20,62 @@ Lists any publishers, subscribers, clients, services, and or timers monitored by
 - `asg_client_name`: The name of the AutoSceneGenClient managing the associated worker
 - `asg_client_ip_addr`: The IP address of the computer where the AutoSceneGenClient resides. Leave empty if the client is on the same machine.
 - `ssh_username`: The SSH username for sending files between this computer and the computer where the AutoSceneGenClient lives. If empty, then we will use the current username.
-- `b_debug_mode`: In case you want to test some of your vehcle's code and want the node to be free from this interface, then set this flag to true. Note: this is still a bit of an experimental feature, and it may get improved or removed in the future.
+- `b_debug_mode`: In case you want to test some of your vehcle's code and want the node to be free from this interface, then set this flag to true. Note: this is still a bit of an experimental feature, I have barely tested/used it, and it may get improved or removed in the future.
 
 **Subscribers:**
 - Clock Sub
   - Topic: `/clock<wid>`
   - Type: `rosgraph_msgs/Clock`
-  - Description: Subscribes to the clock topic coming from the ROSIntegration plugin in Unreal Engine where the AutoSceneGenVehicle is
+  - Description: Subscribes to the clock topic coming from the ROSIntegration plugin in Unreal Engine where the vehicle is.
 - Client Status Sub
   - Topic: `/<asg_client_name>/status`
   - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the AutoSceneGenClient's status
+  - Description: Subscribes to the client's status.
 - Worker Status Sub
   - Topic: `/asg_worker<wid>/status`
   - Type: `auto_scene_gen_msgs/StatusCode`
-  - Description: Subscribes to the AutoSceneGenWorker's status
+  - Description: Subscribes to the worker's status.
 - Vehicle Status Sub
   - Topic: `/<asg_client_name>/<vehicle_name>/status`
   - Type: `auto_scene_gen_msgs/VehicleStatus`
-  - Description: Subscribes to the AutoSceneGenVehicle's status
+  - Description: Subscribes to the vehicle's status.
 - Vehicle Node Operating Info Sub
   - Topic: `/<asg_client_name>/vehicle_node_operating_info`
   - Type: `auto_scene_gen_msgs/VehicleNodeOperatingInfo`
-  - Description: Subscribes to the vehicle node operating info published by the AutoSceneGenClient
+  - Description: Subscribes to the vehicle node operating info published by the client.
 - Scene Description Sub
   - Topic: `/asg_worker<wid>/scene_description`
   - Type: `auto_scene_gen_msgs/SceneDescription`
-  - Description: Subscribes to the current scene description being ran on the AutoSceneGenWorker
+  - Description: Subscribes to the current scene description being ran on the worker.
  
 **Clients:**
 - Register Node Client
   - Topic: `/<asg_client_name>/services/register_vehicle_node`
   - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Client for registering with the AutoSceneGenClient
+  - Description: Client for registering with the client.
 - Unregister Node Client
   - Topic: `/<asg_client_name>/services/unregister_vehicle_node`
   - Type: `auto_scene_gen_msgs/RegisterVehicleNode`
-  - Description: Client for unregistering with the AutoSceneGenClient
+  - Description: Client for unregistering with the client.
 - Notify Ready Client
   - Topic: `/<asg_client_name>/services/notify_ready`
   - Type: `auto_scene_gen_msgs/NotifyReady`
-  - Description: Client for notifying to the AutoSceneGenClient that this vehicle node is ready. Techncally, we send service requests, but we treat these requests as notifications.
+  - Description: Client for notifying to the client that this vehicle node is ready. Techncally, we send service requests, but we treat these requests as notifications.
  
 **Timers**
 - Register Node Timer
   - Timer Callback: `register_node_timer_cb`
-  - Description: This callback runs every second and ensures that the vehicle node is registered with the AutoSceneGenClient (once it comes online) and then makes sure that its `NotifyReady` requests are received.
+  - Description: This callback runs every second and ensures that the vehicle node is registered with the client (once it comes online) and then makes sure that its `NotifyReady` requests are received.
 
 ## General Node Workflow
 
 Assuming that the `b_debug_mode` parameter is set to false, then the veicle node's operation will be as follows:
 1. Load ROS parameters and create ROS objects (see above).
-2. Wait for the AutoSceneGenClient to come online.
-3. Register with the AutoSceneGenClient.
-4. Send a `NotifyReady` request to the AutoSceneGenClient and verify it was received.
+2. Wait for the client to come online.
+3. Register with the client.
+4. Send a `NotifyReady` request to the client and verify it was received.
 5. Follow any custom callbacks that you created and function like a normal node (see ).
-6. Perform a reset procedure when the AutoSceneGenVehicle is disabled (see below).
+6. Perform a reset procedure when the vehicle is disabled (see below).
 7. Go back to step 4 and repeat until the node is destroyed.
 
 ### Customizing the Node
@@ -101,9 +102,9 @@ The `AutoSceneGenVehicleNode` class provides a logging function that makes it ea
 
 ### Saving Node Data
 
-In a number of situations, you will want your vehicle nodes to save their data so you can later analyze the data, create plots/figures, etc. The `AutoSceneGenVehicleNode` class provides a `save_node_data` function that automatically gets called during the reset process (see below) allowing you to save any data before the node's internal state is reset. The `AutoSceneGenVehicleNode` class also contains three variables that will be needed when saving your data. Of these variables, `save_dir` and `b_save_minimal` are set by the client.
+In a number of situations, you will want your vehicle nodes to save their data so you can later analyze it, create plots/figures, etc. The `AutoSceneGenVehicleNode` class provides a `save_node_data` function that automatically gets called during the reset process (see below) allowing you to save any data before the node's internal state is reset. The `AutoSceneGenVehicleNode` class also contains three variables that will be needed when saving your data. Of these variables, `save_dir` and `b_save_minimal` are set by the client.
 - `save_dir`: This string denotes the directory on the client's computer where all of this node's data will be saved to.
-- `temp_save_dir`: This string denotes a temporary directory on the vehicle nodes' computer where it can save data to temporarily before copying it to the `save_dir` directory on the client computer. This will come in handy when the vehicle node does not reside on the same computer as the client.
+- `temp_save_dir`: This string denotes a temporary directory on the vehicle node's computer where it can save data to temporarily before copying it to the `save_dir` directory on the client computer. This will come in handy when the vehicle node does not reside on the same computer as the client.
 - `b_save_minimal`: This boolean indicates how much data the vehicle node should save. Even though you may wish to save as much data as possible, saving lage data files consumes a lot of time and creates a bottleneck as it holds up the client from running another scenario until the node finihes saving all of its data. Hence, we provide the option (if you choose to use it) to let you specify how much data you wish to save. If this value is true, then the node should only save the least amount of data necessry for your application. If the value is false, then it can save as much data as you need.
 
 For Python vehicle nodes, you may find the following functions to be helpful:
@@ -115,10 +116,19 @@ For Python vehicle nodes, you may find the following functions to be helpful:
 For C++ vehicle nodes, you may find the following functions to be helpful:
 - `save_file_on_remote_asg_client`
 
+### Requesting a Rerun
+
+Since no simulation is perfect, it may be useful to rerun a scenario if you are able to detect if any problems that occurred that would not normally occur in the real vehicle/system. For example, even though ROS2's QoS feature allows you to configure the communication quality between nodes, due to the ROS pipeline between Unreal Engine and rosbridge, there may be added latency or hiccups that prevent things from running smoothly. The `check_for_rerun_request` function is built into the reset process (see below) and it provides you with the opportunity to internally monitor various things and request a rerun as desired
+
+To use this feature, first override the `check_for_rerun_request` function with any verification checks you wish to perform. Then, if a check fails, do the following to request a rerun:
+1. Set the `request_rerun` field in the `NotifyReady` request to true.
+2. Set the `reason_for_rerun` field in the `NotifyReady` request field to explain the reason for the rerun request.
+The node will automatically reset these two fields after submitting the `NotifyReady` request.
+
 ### The Reset Procedure
 
-Once the simulation terminates, all AutoSceneGenVehicleNodes must reset their internal state so they can be ready for the next simulation. Internally, the vehicle nodes monitor the vehicle's "OK status". The OK status returns true if all of the following conditions are true:
-- The Vehicle node is registered with the client
+Once the simulation terminates, all of the corresponding vehicle nodes must reset their internal state so they can be ready for the next simulation. Internally, the vehicle nodes monitor the vehicle's "OK status". The OK status returns true if all of the following conditions are true:
+- The vehicle node is registered with the client
 - The vehicle node's most recent `NotifyReady` request was proceesed by the client
 - The vehicle in Unreal Engine is enabled
 - The client has informed the vehicle nodes that is okay for them to run
@@ -126,15 +136,11 @@ Once the simulation terminates, all AutoSceneGenVehicleNodes must reset their in
 Once the OK status changes to false, the reset procedure is triggered (all of this takes place inside the vehicle status callback):
 1. The vehicle disabled timestamp is recorded
 2. If the incoming vehicle status message was not preempted (i.e, the simulation was not aborted due to a detected issue), then:
-   - The node will have the chance to save any internal data to a save directory on the computer where the client resides.
-   - The node will be allowed to request a rerun of the scenario if it detected a potential problem that should not have occurred (this is left to the user to decide).
-   - The vehicle nodes log file will get saved to the save directory on the computer where the client resides.
+   - The `save_node_data` function will be called allowing the node to save any internal data to a save directory on the computer where the client resides.
+   - The function `check_for_rerun_request` will be called allowing the node to request a rerun of the last scenario if it detected a potential problem that should not have occurred (this is left to the user to decide).
+   - The vehicle node's log file will get saved to the save directory on the computer where the client resides.
 3. The vehicle node's temporary save directory will be reset.
-4. The `reset()` function will be called in which the vehicle node should reset all internal variables that need to be reset.
+4. The `reset` function will be called in which the vehicle node should reset all internal variables that need to be reset.
 5. The vehicle node will send a `NotifyReady` request to the client informing that it is ready for the next scenario.
-
-### Requesting a Rerun
-
-Since you may likely wish to save data to a folder for later analysis, the `AutoSceneGenVehicleNode` class provides a function dedicated to letting you save any daya you need.
 
 ## Clock Time
