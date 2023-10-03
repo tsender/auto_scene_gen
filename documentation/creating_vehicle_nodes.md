@@ -77,23 +77,24 @@ Assuming that the `b_debug_mode` parameter is set to false, then the veicle node
 5. Follow any custom callbacks that you created and function like a normal node (see ).
 6. Perform a reset procedure when the vehicle is disabled (see below).
 7. Go back to step 4 and repeat until the node is destroyed.
+8. Prioer to getting destroyed, perform a shutdown procedure.
 
 ### Customizing the Node
 
 The `AutoSceneGenVehicleNode` is the base class from which all of your ROS nodes will inherit from because this node abstracts away all of the overhead needed to interactwith the entire AutoSceneGen ecosystem. For the most part, you can treat your child classes like regular ROS nodes - you can add more parameters in the constructor and create however many callbacks you need in each node.
 
-Since this entire platform is built on creating an automated system in which scenarios can be created/executed repeatedly without forcing the user to restart Unreal Engine or their ROS nodes (unless a critical problem arises), part of the overhead embedded in this interfaces does result in some minor modifications to your ROS nodes. The following codeblock must be placed at the very top of every callback to ensure your code does not execute prematurely:
+Since this entire platform is built on creating an automated system in which scenarios can be created/executed repeatedly without forcing the user to restart Unreal Engine or their ROS nodes (unless a critical problem arises), part of the overhead embedded in this interfaces does result in some minor modifications to your ROS nodes. The following codeblock must be placed at the very top of *every* callback to ensure your code does not execute prematurely:
 
 Python:
 ```
 if not self.vehicle_ok():
-  return
+    return
 ```
 
 C++:
 ```
-if (!vehicleOK())
-  return;
+if (!vehicle_ok())
+    return;
 ```
 
 ### Logging
@@ -123,6 +124,7 @@ Since no simulation is perfect, it may be useful to rerun a scenario if you are 
 To use this feature, first override the `check_for_rerun_request` function with any verification checks you wish to perform. Then, if a check fails, do the following to request a rerun:
 1. Set the `request_rerun` field in the `NotifyReady` request to true.
 2. Set the `reason_for_rerun` field in the `NotifyReady` request field to explain the reason for the rerun request.
+
 The node will automatically reset these two fields after submitting the `NotifyReady` request.
 
 ### The Reset Procedure
@@ -134,7 +136,7 @@ Once the simulation terminates, all of the corresponding vehicle nodes must rese
 - The client has informed the vehicle nodes that is okay for them to run
 
 Once the OK status changes to false, the reset procedure is triggered (all of this takes place inside the vehicle status callback):
-1. The vehicle disabled timestamp is recorded
+1. The vehicle disabled timestamp is recorded.
 2. If the incoming vehicle status message was not preempted (i.e, the simulation was not aborted due to a detected issue), then:
    - The `save_node_data` function will be called allowing the node to save any internal data to a save directory on the computer where the client resides.
    - The function `check_for_rerun_request` will be called allowing the node to request a rerun of the last scenario if it detected a potential problem that should not have occurred (this is left to the user to decide).
@@ -143,4 +145,76 @@ Once the OK status changes to false, the reset procedure is triggered (all of th
 4. The `reset` function will be called in which the vehicle node should reset all internal variables that need to be reset.
 5. The vehicle node will send a `NotifyReady` request to the client informing that it is ready for the next scenario.
 
+### Shutdown Procedure
+
+Before a vehicle node is destroyed, you need to call the `shutdown` function on the node to unregister it from the client. The procedure to [spin a vehicle node](#spinning-a-vehicle-node) will show you how to spin the node and make sure it gets shutdow properly.
+
 ## Clock Time
+
+AutoSceneGenVehicleNodes do not use the built-in clock that comes with ROS nodes because it is expected that you may be running multiple Unreal simulations in parallel. Although ROS nodes let you control the ROS clock time via external time source, they only allow you to publish on the `/clock` topic. Running multiple simulations in parallel requires multiple independent clock topics, and so we must instead use our own version of this time source mechanism. The ROSIntegration fork required by this platform provides an extra parameter allowing you to specify the clock topic. You will need to set the topic name to `/clock<wid>`, where `<wid>` is replaced by the ID of the worker running in the Unreal simulation.
+
+Both the Python and C++ `AutoSceneGenVehicleNode` classes provide two class variables for access to a system clock `system_clock` and the simulation clock `sim_clock`. Assuming the clock topics are configured correctly, then the base class will automatically align the node's simulation clock with the time coming from the simulation. 
+
+**IMPORTANT**: Whenever you create timers, you will need to pass along the appropriate clock, `system_clock` or `sim_clock`, so your timers run correctly (most of the time you will likely just be using the `sim_clock`).
+
+## Spinning a Vehicle Node
+
+Both Python and C++ versions of the `AutoSceneGenVehicleNode` classes provides a helper function for spinning a vehicle node called `spin_vehicle_node`. Due to the need for keeping the sim clock as up-to-date as ppssible, this requires that all vehicle nodes use a multithreaded executor. We can configure how many threads we want the executor to use when calling `spin_vehicle_node`. For demonstration purposes. let's say we created a custom vehicle node class called `MyVehicleNode` in the package `my_package`.
+
+Here is the Python version of the `main` function for creating and spinning our vehicle node:
+```
+from my_package.my_vehicle_node import MyVehicleNode
+from auto_scene_gen_core.vehicle_node import spin_vehicle_node
+
+def main(args=None):
+    # Code to initalize any parameters for our vehicle node
+
+    rclpy.init(args=args)
+    node = MyVehicleNode("my_vehicle_node", <other_parameters>)
+    spin_vehicle_node(node, num_threads=2)
+```
+
+Here is the C++ version of the main function for creating and spinning our vehicle node. Note, unlike in Python, a try-catch block in C++ cannot catch any events that a signal handler would catch, such as a signal interrupt (ctrl-c). To ensure our vehicle node shuts down properly, we must declare our vehicle node as a global variable in the executable file and configure a custom `signal_handler` function. I do not know of any other way to shutdown the node properly while accounting for signal handling.
+```
+#include "rclcpp/rclcpp.hpp"
+#include <csignal>
+#include "auto_scene_gen_core/vehicle_node.hpp"
+#include "my_package/my_vehicle_node.hpp"
+
+// Needs to be a global variable so we can use with signal handling
+std::shared_ptr<MyVehicleNode> node;
+
+void signal_handler(int signal_num)
+{
+    if (signal_num == SIGINT)
+        node->log(MyVehicleNode::LOG_INFO, "Keyboard interrupt. Shutting down...");
+    else
+        node->log(MyVehicleNode::LOG_ERROR, "Signal handler. Value = " + std::to_string(signal_num));
+    node->shutdown();
+    rclcpp::shutdown();
+    exit(signal_num);
+}
+
+int main(int argc, char * argv[])
+{
+    rclcpp::init(argc, argv);
+
+    // Manually make signal handler so we can perform desired logging
+    rclcpp::uninstall_signal_handlers();
+    struct sigaction sig_action;
+    sigemptyset(&sig_action.sa_mask);
+    sig_action.sa_handler = signal_handler;
+    sig_action.sa_flags = 0;
+    sigaction(SIGINT, &sig_action, nullptr);
+    sigaction(SIGFPE, &sig_action, nullptr);
+    sigaction(SIGBUS, &sig_action, nullptr);
+    sigaction(SIGABRT, &sig_action, nullptr);
+    sigaction(SIGSEGV, &sig_action, nullptr);
+
+    // Code to initialize any parameters for our vehicle node
+
+    node = std::make_shared<MyVehicleNode>("my_vehicle_node", <other_parameters>);
+    auto_scene_gen_core::spin_vehicle_node(node, 2);
+    return 0;
+}
+```
