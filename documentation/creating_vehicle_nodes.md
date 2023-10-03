@@ -77,7 +77,7 @@ Assuming that the `b_debug_mode` parameter is set to false, then the veicle node
 5. Follow any custom callbacks that you created and function like a normal node (see ).
 6. Perform a reset procedure when the vehicle is disabled (see below).
 7. Go back to step 4 and repeat until the node is destroyed.
-8. Prioer to getting destroyed, perform a shutdown procedure.
+8. Prior to getting destroyed, perform a shutdown procedure.
 
 ### Customizing the Node
 
