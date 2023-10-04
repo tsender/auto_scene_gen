@@ -4,25 +4,34 @@
 
 This repo contains the base ROS2 interface for interacting with the [AutomaticSceneGeneration](https://github.com/tsender/AutomaticSceneGeneration) plugin for UE4.
 
-## Software Requirements
-
-**Supported Systems:**
-- Ubuntu and ROS2 Foxy+
-  - This repo was written and tested with ROS2 Foxy on Ubuntu 20.04, but it should work on Foxy and up.
-
-**Usage Dependencies:**
-While this interface doesn't have dependencies to external libraries (other than standard ROS2, C++, and Python 3 libraries), when you use the
-3. [rosbridge_suite](https://github.com/tsender/rosbridge_suite/tree/main): Required by the ROSIntegration plugin. Use the `main` branch on @tsender's fork because the authors of `rosbridge_suite` have not yet accepted accepted the PR https://github.com/RobotWebTools/rosbridge_suite/pull/824 (please feel free to contribute to the PR in any way).
-
-## Overview
-
 This interface contains two ROS packages:
-1. `auto_scene_gen_msgs`: Contains the custom message and service definitions. See LINK for a detailed description of these messages and services.
+1. `auto_scene_gen_msgs`: Contains the custom message and service definitions.
 2. `auto_scene_gen_core`: Contains the main ROS nodes and various objects needed to interact with an AutoSceneGenWorker and AutoSceneGenVehicle in UE4.
 
-## Installation
+Even though the ROS code you write will depend on this repo, we think it's best that you simply add the two ament packages from this repo into your custom repo. One reason for this is because these repos are fairly lightweight. But more importantly, in case you choose to modify the message definitions or any part of the provided ROS nodes, it will be easier to compile and run your code if everything is in one location.
 
-1. The recommende way to use this repo is use our provided dockerfile in Ubuntu as it contains all the needed dependencies. You can download our docker image with the tag `tsender/tensorflow:gpu-focal-foxy` (you may need to login to your docker account from the command line). You may also modify the [original docker image](https://github.com/tsender/dockerfiles/blob/main/tensorflow_foxy/Dockerfile) and build an updated version.
+Below are some important documentation links explaining how to use this repo:
+- [Message and service definitions](https://github.com/tsender/auto_scene_gen/blob/main/documentation/msg_and_srv_reference.md)
+- [Creating and running scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md)
+- [Creating vehicle nodes](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_vehicle_nodes.md)
+
+## Software Requirements and Installation
+
+### Supported Systems
+This repo was written and tested with ROS2 Foxy on Ubuntu 20.04 in a custom docker image, but it should work on Foxy and up. We only support the use of native Ubuntu.
+
+### Dependencies
+While there are a handful of external libraires needed for the Python 3 and C++ code to compile and run, it is highly recommended that you simply use our custom docker image as it contains the minimum amount of software libraries that you may need. You can download our docker image with the tag `tsender/tensorflow:gpu-focal-foxy` (you may need to login to your docker account from the command line). But if you wish to add more libraries for your own code, you can inspect the [original docker image](https://github.com/tsender/dockerfiles/blob/main/tensorflow_foxy/Dockerfile) for everything it contains.
+
+For reference, these are the libraries we rely on that are not commonly included in standard C++ or Python 3 installations:
+- (C++) The `date` library https://github.com/HowardHinnant/date, used for logging purposes
+- (Python 3) `paramiko`, used for ssh
+
+As mentioned in the [AutomaticSceneGeneration](https://github.com/tsender/AutomaticSceneGeneration) documentation, we utilize the `ROSIntegration` UE4 plugin for ROS communication, which further requires use of the `rosbridge_suite` repo (which will run on Ubuntu). As far as the Ubuntu dependencies is concerned, you will need to use the `ros2` branch on @tsender's fork of [rosbridge_suite](https://github.com/tsender/rosbridge_suite/tree/main) because the authors of `rosbridge_suite` have not yet accepted the PR https://github.com/RobotWebTools/rosbridge_suite/pull/824 (please feel free to contribute to the PR in any way).
+
+### Installation
+
+1. Download the provided docker image or add all of its libraries to your Ubuntu system.
 2. Let's put all of our code in a common folder: `mkdir ~/auto_scene_gen_ws`
 3. Let's clone and build rosbridge_suite
    ```
@@ -33,17 +42,16 @@ This interface contains two ROS packages:
    source /opt/ros/foxy/setup.bash
    colcon build
    ```
-3. Let's clone and build the `auto_scene_gen` repo. Replace this repo with your primary development repo, so long as contains the two `auto_scene_gen_*` packages.
+3. Create a new ROS workspace as the main location for all of your code. Let's assume it has the file path `~/auto_scene_gen_ws/my_workspace/`.
+4. Copy the two `auto_scene_gen_*` packages into `~/auto_scene_gen_ws/my_workspace/src/`.
+5. Let's build our new workspace. You only need to do this step if your workspace has not been built before. Note, we use the rosbridge_suite installation from above as an underlay.
    ```
    cd ~/auto_scene_gen_ws/
    source rosbridge_suite/install/setup.bash # rosbridge_suite is our underlay
-   mkdir auto_scene_gen
-   cd auto_scene_gen
-   git clone https://github.com/tsender/auto_scene_gen.git src
+   cd ~/auto_scene_gen_ws/my_workspace/
    colcon build
-   source install/setup.bash # This sources the overlay
    ```
-   In all new terminals you open, make sure to source the overlay:
+6. In all new terminals you open, make sure to source the overlay (i.e., your main workspace) before working.
    ```
-   source ~/auto_scene_gen_ws/auto_scene_gen/install/setup.bash
+   source ~/auto_scene_gen_ws/my_workspace/install/setup.bash
    ```
