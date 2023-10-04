@@ -20,6 +20,7 @@ Whether we are discussing the scene, environment, or scenario, all of these obje
 ## Abbreviations
 
 Instead of always writing the prefix "AutoSceneGen", we will often use a shorthand when referring to the various components in the AutoSceneGen ecosystem. The shorthand only applies if it makes based on the context.
+- Client: Refers to an AutoSceneGenClient, which is a Python ROS node that determines the scenarios one or more AutoSceneGenWorkers should run.
 - Worker: Refers to an instance of an AutoSceneGenWorker, which resides in Unreal Engine.
 - Vehicle: Refers to an instance of an AutoSceneGenVehicle, which resides in Unreal Engine.
 - Vehicle Node: Refers to an instance of an AutoSceneGenVehicleNode, which is a Python or C++ ROS node within the autonomy stack controlling an AutoSceneGenVehicle.
