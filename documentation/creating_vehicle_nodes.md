@@ -1,5 +1,10 @@
 # Creating and Working with AutoSceneGenVehicleNodes
 
+Quick Links:
+- [Home Page](https://github.com/tsender/auto_scene_gen/tree/main)
+- [Message and service definitions](https://github.com/tsender/auto_scene_gen/blob/main/documentation/msg_and_srv_reference.md)
+- [Creating and running scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md)
+
 Once you know how to [create scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md) using the provided ROS interface, you will then want to create ROS nodes that can control the AutoSceneGenVehicle operating in Unreal Engine. Because we expect that you will be creating many different scenarios, one after the other, and do not want to have to restart your vehicle nodes each time to reset them, we developed a special vehicle node, called an AutoSceneGenVehicleNode, that can seamlessly interact with an AutoSceneGenVehicle, the corresponding AutoSceneGenWorker, and the correpsonding AutoSceneGenClient. To offer the most flexibility, we provide both a Python and a C++ implementation for the AutoSceneGenVehicleNode, and we will provide some templated code demonstrating how to properly work with these classes.
 
 ## Abbreviations
@@ -217,4 +222,22 @@ int main(int argc, char * argv[])
     auto_scene_gen_core::spin_vehicle_node(node, 2);
     return 0;
 }
+```
+
+## Compiling a C++ AutoSceneGenVehicleNode
+
+When creating a C++ subclass of `AutoSceneGenVehicleNode`, your CMakeLists.txt file should have the following `find_package` commands:
+```
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(auto_scene_gen_msgs REQUIRED)
+find_package(auto_scene_gen_core REQUIRED)
+find_package(Boost COMPONENTS system filesystem REQUIRED) # This is needed since auto_scene_gen_core cannot export them for us
+```
+The last line is critical. Unfortunatey, I was unable to get the `auto_scene_gen_core` package to export the two boost libraries. Consequently, every `ament_cmake` package that depends on `auto_scene_gen_core` muust find those two boost libraries for that package to compile.
+
+Fortunately, creating your executable does not require linking against boost. You can create an executable as expected with the lines
+```
+add_executable(test_vehicle_node src/test_vehicle_node.cpp)
+ament_target_dependencies(test_vehicle_node rclcpp auto_scene_gen_msgs auto_scene_gen_core)
 ```
