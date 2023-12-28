@@ -5,8 +5,8 @@
 This repo contains the base ROS2 interface for interacting with the [AutomaticSceneGeneration](https://github.com/tsender/AutomaticSceneGeneration) plugin for UE4.
 
 This interface contains two ROS packages:
-1. `auto_scene_gen_msgs`: Contains the custom message and service definitions.
-2. `auto_scene_gen_core`: Contains the main ROS nodes and various objects needed to interact with an AutoSceneGenWorker and AutoSceneGenVehicle in UE4.
+1. `auto_scene_gen_core`: Contains the main ROS nodes and various objects needed to interact with an AutoSceneGenWorker and AutoSceneGenVehicle in UE4.
+2. `auto_scene_gen_msgs`: Contains the custom message and service definitions.
 
 Even though the ROS code you write will depend on this repo, we think it's best that you simply add the two ament packages from this repo into your custom repo. One reason for this is because these repos are fairly lightweight. But more importantly, in case you choose to modify the message definitions or any part of the provided ROS nodes, it will be easier to compile and run your code if everything is in one location.
 
