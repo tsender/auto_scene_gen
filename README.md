@@ -11,9 +11,9 @@ This interface contains two ROS packages:
 Even though the ROS code you write will depend on this repo, we think it's best that you simply add the two ament packages from this repo into your custom repo. One reason for this is because these repos are fairly lightweight. But more importantly, in case you choose to modify the message definitions or any part of the provided ROS nodes, it will be easier to compile and run your code if everything is in one location.
 
 Below are some important documentation links explaining how to use this repo:
-- [Message and service definitions](https://github.com/tsender/auto_scene_gen/blob/main/documentation/msg_and_srv_reference.md)
-- [Creating and running scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md)
-- [Creating vehicle nodes](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_vehicle_nodes.md)
+- [Message and Service Definitions](documentation/msg_and_srv_reference.md)
+- [Creating and Running Scenarios](documentation/creating_scenarios.md)
+- [Creating Vehicle Nodes](documentation/creating_vehicle_nodes.md)
 
 ## Software Requirements and Installation
 
@@ -21,7 +21,7 @@ Below are some important documentation links explaining how to use this repo:
 This repo was written and tested with ROS2 Foxy on Ubuntu 20.04 in a custom docker image, but it should work on Foxy and up. We only support the use of native Ubuntu.
 
 ### Dependencies
-While there are a handful of external libraires needed for the Python 3 and C++ code to compile and run, it is highly recommended that you simply use our custom docker image as it contains the minimum amount of software libraries that you may need. You can download our docker image with the tag `tsender/tensorflow:gpu-focal-foxy` (you may need to login to your docker account from the command line). But if you wish to add more libraries for your own code, you can inspect the [original docker image](https://github.com/tsender/dockerfiles/blob/main/tensorflow_foxy/Dockerfile) for everything it contains.
+While there are a handful of external libraires needed for the Python 3 and C++ code to compile and run, it is highly recommended that you simply use our custom docker image as it contains the minimum amount of software libraries that you may need. You can download our docker image with the tag `tsender/tensorflow:gpu-focal-foxy` (you may need to login to your docker account from the command line to pull the image). But if you wish to add more libraries for your own code, you can inspect the [original docker image](https://github.com/tsender/dockerfiles/blob/main/tensorflow_foxy/Dockerfile) for everything it contains.
 
 For reference, these are the libraries we rely on that are not commonly included in standard C++ or Python 3 installations:
 - (C++) The `date` library https://github.com/HowardHinnant/date, used for logging purposes

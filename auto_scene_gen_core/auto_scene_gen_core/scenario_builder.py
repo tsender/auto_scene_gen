@@ -1,5 +1,6 @@
-import numpy as np
 import copy
+import math
+import numpy as np
 import os
 from typing import Tuple, List, Dict, Union
 
@@ -198,11 +199,11 @@ class OperationalAttributes(ScenarioAttributeGroup):
 
     def get_default_start_location(self):
         """Return the default start location as a tuple of (x,y)"""
-        return (self.start_location_x.default, self.start_location_y.default)
+        return np.array([self.start_location_x.default, self.start_location_y.default])
     
     def get_default_goal_location(self):
         """Return the default goal location as a tuple of (x,y)"""
-        return (self.goal_location_x.default, self.goal_location_y.default)
+        return np.array([self.goal_location_x.default, self.goal_location_y.default])
 
 
 class StructuralSceneActorConfig:
@@ -223,6 +224,25 @@ class StructuralSceneActorConfig:
     def __str__(self):
         d = {"path_name": self.path_name, "num_instances": self.num_instances, "max_scale": self.max_scale, "ssa_type": self.ssa_type}
         return str(d)
+    
+
+class SSAChangeLogAttributes:
+    """SSA attributes that can be modified"""
+    def __init__(self):
+        self.x = None
+        self.y = None
+        self.yaw = None
+        self.scale = None
+        self.b_visible = None
+
+
+class SSAChangeLog:
+    """Class for defining the changes for a specific SSA"""
+    def __init__(self):
+        self.ssa_idx = None # SSA index in the StructuralSceneActorConfig object
+        self.obs_idx = None # Object index within the SSA layout of the RunScenario request
+        self.old : SSAChangeLogAttributes = SSAChangeLogAttributes()
+        self.new : SSAChangeLogAttributes = SSAChangeLogAttributes()
     
 
 class AutoSceneGenScenarioBuilder:
@@ -478,27 +498,43 @@ class AutoSceneGenScenarioBuilder:
                         loc.append(np.array([layout.x[i], layout.y[i]], dtype=np.float32))
             return loc
 
-    def add_rand_ssa(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request):
-        """Add a single random obstacle to RunScenario request
+    def add_random_ssa(self, 
+                       scenario_request: auto_scene_gen_srvs.RunScenario.Request, 
+                       max_attempts: int = None, 
+                       ssa_idx: int = None, 
+                       center: np.float32 = None, 
+                       radius: float = None):
+        """Add a single random obstacle to RunScenario request. Can specify a circle within which the obstacle will be placed randomly in. Must specify both center and radius.
         
         Args:
             - scenario_request: RunScenario request to modify
+            - max_attempts: The maximum number of attempts, if not None.
+            - ssa_idx: (Optional) The SSA index in the SSA setup from which to use. If None, then an index will be randomly chosen.
+            - center: (Optional) Specifies the center of a circle from which the obstacle will be placed randomly in
+            - radius: (Optional) Specifies the radius of a circle from which to place the obstacle in
         
         Returns:
-            True if successful, False otherwise
+            - b_success: True if successful, False otherwise
+            - attempts: Number of attempts made
+            - change_log: The SSA change log
         """
         ssa_array : List[auto_scene_gen_msgs.StructuralSceneActorLayout] = scenario_request.scene_description.ssa_array
 
         num_inactive, breakdown = self.get_num_inactive_ssa(ssa_array)
         if num_inactive == 0: # All obstacles are active
-            return False
-
+            return False, 0, None
+        
         # Get idxs that we can add obstacles to
         valid_ssa_idx = []
         for i,n in enumerate(breakdown):
             if n > 0:
                 valid_ssa_idx.append(i)
-        ssa_idx = valid_ssa_idx[np.random.randint(len(valid_ssa_idx))] # Pick the type of SSA now
+
+        if ssa_idx is None:
+            ssa_idx = valid_ssa_idx[np.random.randint(len(valid_ssa_idx))] # Pick the type of SSA now
+        else:
+            if breakdown[ssa_idx] == 0: # Cannot add any more
+                return False, 0, None
 
         # Use lowest available index for adding the obstacle
         obs_idx = None
@@ -511,19 +547,32 @@ class AutoSceneGenScenarioBuilder:
         goal_location = np.array([scenario_request.vehicle_goal_location.x, scenario_request.vehicle_goal_location.y])
 
         b_valid = False
+        attempts = 0
         request_copy = copy.deepcopy(scenario_request)
         while not b_valid:
+            if attempts == max_attempts:
+                return False, attempts, None
+
             ssa_array_copy = copy.deepcopy(ssa_array)
             
-            x = self.ssa_attr.x.random()
-            y = self.ssa_attr.y.random()
+            if center is not None and radius is not None:
+                angle = np.random.rand() * 2.*math.pi
+                distance = np.sqrt(np.random.rand()) * radius
+                x = np.clip(center[0] + distance * np.cos(angle), 0., self.landscape_nominal_size)
+                y = np.clip(center[1] + distance * np.sin(angle), 0., self.landscape_nominal_size)
+            else:
+                x = self.ssa_attr.x.random()
+                y = self.ssa_attr.y.random()
+
             yaw = self.ssa_attr.yaw.random()
             scale = self.ssa_attr.scale.random() * self.ssa_config[ssa_idx].max_scale
 
             # Cannot add obstacle inside obstacle-free radii
             if fast_norm(start_location - np.array([x,y])) <= self.start_obstacle_free_radius:
+                attempts += 1
                 continue
             if fast_norm(goal_location - np.array([x,y])) <= self.goal_obstacle_free_radius:
+                attempts += 1
                 continue
             
             ssa_array_copy[ssa_idx].x[obs_idx] = x
@@ -534,6 +583,7 @@ class AutoSceneGenScenarioBuilder:
 
             request_copy.scene_description.ssa_array = ssa_array_copy
             b_valid = self.is_scenario_request_feasible(request_copy)
+            attempts += 1
 
         # Now we modify the input SSA array
         ssa_array[ssa_idx].x[obs_idx] = x
@@ -541,22 +591,36 @@ class AutoSceneGenScenarioBuilder:
         ssa_array[ssa_idx].yaw[obs_idx] = yaw
         ssa_array[ssa_idx].scale[obs_idx] = scale
         ssa_array[ssa_idx].visible[obs_idx] = True
-        return True
+
+        # Create change log
+        change_log = SSAChangeLog()
+        change_log.ssa_idx = ssa_idx
+        change_log.obs_idx = obs_idx
+        change_log.new.x = x
+        change_log.new.y = y
+        change_log.new.yaw = yaw
+        change_log.new.scale = scale
+        change_log.new.b_visible = True
+
+        return True, attempts, change_log
     
-    def remove_rand_ssa(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request):
+    def remove_random_ssa(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request, max_attempts: int = None):
         """Remove random obstacle from RunScenario request
         
         Args:
             - scenario_request: RunScenario request to modify
+            - max_attempts: The maximum number of attempts, if not None.
         
         Returns:
-            True if successful, False otherwise
+            - b_success: True if successful, False otherwise
+            - attempts: Number of attempts made
+            - change_log: The SSA change log
         """
         ssa_array : List[auto_scene_gen_msgs.StructuralSceneActorLayout] = scenario_request.scene_description.ssa_array
 
         num_active_obs, breakdown = self.get_num_active_ssa(ssa_array)
-        if num_active_obs <= 1: # There must be at least 1 obstacle in the scene at all times (no obstacles is trivial)
-            return False
+        if num_active_obs == 0: # Cannot remove what does not exist
+            return False, 0, None
 
         valid_ssa_idx = []
         for i,n in enumerate(breakdown):
@@ -564,8 +628,12 @@ class AutoSceneGenScenarioBuilder:
                 valid_ssa_idx.append(i)
 
         b_valid = False
+        attempts = 0
         request_copy = copy.deepcopy(scenario_request)
         while not b_valid:
+            if attempts == max_attempts:
+                return False, attempts, None
+
             ssa_array_copy = copy.deepcopy(ssa_array)
             ssa_idx = valid_ssa_idx[np.random.randint(len(valid_ssa_idx))] # Can choose different SSA type each iteration
 
@@ -579,33 +647,75 @@ class AutoSceneGenScenarioBuilder:
             ssa_array_copy[ssa_idx].visible[obs_idx] = False
             request_copy.scene_description.ssa_array = ssa_array_copy
             b_valid = self.is_scenario_request_feasible(request_copy) # This check should almost always pass, but we still have to verify anyway for consistency purposes
+            attempts += 1
 
         # Update actual SSA array
         ssa_array[ssa_idx].visible[obs_idx] = False
-        return True
 
-    def perturb_rand_ssa(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request):        
+        # Create change log
+        change_log = SSAChangeLog()
+        change_log.ssa_idx = ssa_idx
+        change_log.obs_idx = obs_idx
+        change_log.new.x = ssa_array[ssa_idx].x[obs_idx]
+        change_log.new.y = ssa_array[ssa_idx].y[obs_idx]
+        change_log.new.yaw = ssa_array[ssa_idx].yaw[obs_idx]
+        change_log.new.scale = ssa_array[ssa_idx].scale[obs_idx]
+        change_log.new.b_visible = False
+
+        return True, attempts, change_log
+
+    def perturb_random_ssa(self, 
+                           scenario_request: auto_scene_gen_srvs.RunScenario.Request, 
+                           max_attempts: int = None, 
+                           ssa_idx: int = None, 
+                           center: np.float = None,
+                           radius: float = None
+                           ):        
         """Perturb a random attribute of a random obstacle in the RunScenario request
         
         Args:
             - scenario_request: RunScenario request to modify
+            - max_attempts: The maximum number of attempts, if not None.
+            - ssa_idx: (Optional) The SSA index in the SSA setup from which to use. If None, then an index will be randomly chosen.
+            - center: (Optional) Specifies the center of a circle from which the obstacle will be placed randomly in
+            - radius: (Optional) Specifies the radius of a circle from which to place the obstacle in
+
+        Note: If both the center and radius args are provided, then the x and y attributes will be treated as a a combined attribute called "pos".
+        If this new "pos" attribute is chosen, then the new position for the obstacle will be randomly chosen within the specified circle.
 
         Returns:
-            True if successful, False otherwise
+            - b_success: True if successful, False otherwise
+            - attempts: Number of attempts made
+            - change_log: The SSA change log
         """
         ssa_array : List[auto_scene_gen_msgs.StructuralSceneActorLayout] = scenario_request.scene_description.ssa_array
 
         num_active_obs, breakdown = self.get_num_active_ssa(ssa_array)
         if num_active_obs == 0: # Nothing to perturb
-            return False
+            return False, 0, None
 
         valid_ssa_idx = []
         for i,n in enumerate(breakdown):
             if n > 0:
                 valid_ssa_idx.append(i)
+        
+        if ssa_idx is None:
+            ssa_idx = valid_ssa_idx[np.random.randint(len(valid_ssa_idx))]
+        else:
+            if breakdown[ssa_idx] == 0: # Nothing to perturb
+                return False, 0, None
 
-        ssa_idx = valid_ssa_idx[np.random.randint(len(valid_ssa_idx))]
-        attr = self.ssa_attr.var_attrs[np.random.randint(len(self.ssa_attr.var_attrs))]
+        # Choose an attribute
+        if center is not None and radius is not None: # Combine x and y
+            attrs2 = []
+            for a in self.ssa_attr.var_attrs:
+                if a != self.ssa_attr.X and a != self.ssa_attr.Y:
+                    attrs2.append(a)
+            if self.ssa_attr.X in self.ssa_attr.var_attrs or self.ssa_attr.Y in self.ssa_attr.var_attrs:
+                attrs2.append("pos")
+            attr = attrs2[np.random.randint(len(attrs2))]
+        else:
+            attr = self.ssa_attr.var_attrs[np.random.randint(len(self.ssa_attr.var_attrs))]
 
         # Pick a random active obstacle index
         valid_obs_idx = []
@@ -620,15 +730,35 @@ class AutoSceneGenScenarioBuilder:
         yaw = ssa_array[ssa_idx].yaw[obs_idx]
         scale = ssa_array[ssa_idx].scale[obs_idx]
 
+        # Create change log
+        change_log = SSAChangeLog()
+        change_log.ssa_idx = ssa_idx
+        change_log.obs_idx = obs_idx
+        change_log.old.x = x
+        change_log.old.y = y
+        change_log.old.yaw = yaw
+        change_log.old.scale = scale
+        change_log.old.b_visible = True
+
         start_location = np.array([scenario_request.vehicle_start_location.x, scenario_request.vehicle_start_location.y])
         goal_location = np.array([scenario_request.vehicle_goal_location.x, scenario_request.vehicle_goal_location.y])
 
         b_valid = False
+        attempts = 0
         request_copy = copy.deepcopy(scenario_request)
         while not b_valid:
+            if attempts == max_attempts:
+                return False, attempts, None
+            
             ssa_array_copy = copy.deepcopy(ssa_array)
 
-            if attr == self.ssa_attr.X:
+            if attr == "pos":
+                angle = np.random.rand() * 2.*math.pi
+                distance = np.sqrt(np.random.rand()) * radius
+                x = np.clip(center[0] + distance * np.cos(angle), 0., self.landscape_nominal_size)
+                y = np.clip(center[1] + distance * np.sin(angle), 0., self.landscape_nominal_size)
+
+            elif attr == self.ssa_attr.X:
                 x = self.ssa_attr.x.random()
 
             elif attr == self.ssa_attr.Y:
@@ -640,11 +770,13 @@ class AutoSceneGenScenarioBuilder:
             elif attr == self.ssa_attr.SCALE:
                 scale = self.ssa_attr.scale.random() * self.ssa_config[ssa_idx].max_scale
 
-            if attr == self.ssa_attr.X or attr == self.ssa_attr.Y:
+            if attr in (self.ssa_attr.X, self.ssa_attr.Y, "pos"):
                 # Cannot move obstacle into obstacle-free radii
                 if fast_norm(start_location - np.array([x,y])) <= self.start_obstacle_free_radius:
+                    attempts += 1
                     continue
                 if fast_norm(goal_location - np.array([x,y])) <= self.goal_obstacle_free_radius:
+                    attempts += 1
                     continue
             
             ssa_array_copy[ssa_idx].x[obs_idx] = x
@@ -654,12 +786,123 @@ class AutoSceneGenScenarioBuilder:
 
             request_copy.scene_description.ssa_array = ssa_array_copy
             b_valid = self.is_scenario_request_feasible(request_copy)
+            attempts += 1
 
         ssa_array[ssa_idx].x[obs_idx] = x
         ssa_array[ssa_idx].y[obs_idx] = y
         ssa_array[ssa_idx].yaw[obs_idx] = yaw
         ssa_array[ssa_idx].scale[obs_idx] = scale
-        return True
+
+        # Add to change log
+        change_log.new.x = x
+        change_log.new.y = y
+        change_log.new.yaw = yaw
+        change_log.new.scale = scale
+        change_log.new.b_visible = True
+
+        return True, attempts, change_log
+    
+    def move_random_ssa(self, 
+                        scenario_request: auto_scene_gen_srvs.RunScenario.Request, 
+                        max_attempts: int = None, 
+                        ssa_idx: int = None,
+                        center: np.float32 = None, 
+                        radius: float = None):        
+        """Move a random SSA to a new random location. Can specify a circle within which the obstacle will be placed randomly in. Must specify both center and radius.
+        
+        Args:
+            - scenario_request: RunScenario request to modify
+            - max_attempts: The maximum number of attempts, if not None.
+            - ssa_idx: (Optional) The SSA index in the SSA setup from which to use. If None, then an index will be randomly chosen.
+            - center: (Optional) Specifies the center of a circle from which the obstacle will be placed randomly in
+            - radius: (Optional) Specifies the radius of a circle from which to place the obstacle in
+
+        Returns:
+            - b_success: True if successful, False otherwise
+            - attempts: Number of attempts made
+            - change_log: The SSA change log
+        """
+        ssa_array : List[auto_scene_gen_msgs.StructuralSceneActorLayout] = scenario_request.scene_description.ssa_array
+
+        num_active_obs, breakdown = self.get_num_active_ssa(ssa_array)
+        if num_active_obs == 0: # Nothing to perturb
+            return False, 0, None
+
+        valid_ssa_idx = []
+        for i,n in enumerate(breakdown):
+            if n > 0:
+                valid_ssa_idx.append(i)
+
+        if ssa_idx is None:
+            ssa_idx = valid_ssa_idx[np.random.randint(len(valid_ssa_idx))]
+        else:
+            if breakdown[ssa_idx] == 0:
+                return False, 0, None
+
+        # Pick a random active obstacle index
+        valid_obs_idx = []
+        for i in range(ssa_array[ssa_idx].num_instances):
+            if ssa_array[ssa_idx].visible[i]:
+                valid_obs_idx.append(i)
+        obs_idx = valid_obs_idx[np.random.randint(len(valid_obs_idx))]
+
+        # Create change log
+        change_log = SSAChangeLog()
+        change_log.ssa_idx = ssa_idx
+        change_log.obs_idx = obs_idx
+        change_log.old.x = ssa_array[ssa_idx].x[obs_idx]
+        change_log.old.y = ssa_array[ssa_idx].y[obs_idx]
+        change_log.old.yaw = ssa_array[ssa_idx].yaw[obs_idx]
+        change_log.old.scale = ssa_array[ssa_idx].scale[obs_idx]
+        change_log.old.b_visible = True
+
+        start_location = np.array([scenario_request.vehicle_start_location.x, scenario_request.vehicle_start_location.y])
+        goal_location = np.array([scenario_request.vehicle_goal_location.x, scenario_request.vehicle_goal_location.y])
+
+        b_valid = False
+        attempts = 0
+        request_copy = copy.deepcopy(scenario_request)
+        while not b_valid:
+            if attempts == max_attempts:
+                return False, attempts, None
+
+            ssa_array_copy = copy.deepcopy(ssa_array)
+
+            if center is not None and radius is not None:
+                angle = np.random.rand() * 2.*math.pi
+                distance = np.sqrt(np.random.rand()) * radius
+                x = np.clip(center[0] + distance * np.cos(angle), 0., self.landscape_nominal_size)
+                y = np.clip(center[1] + distance * np.sin(angle), 0., self.landscape_nominal_size)
+            else:
+                x = self.ssa_attr.x.random()
+                y = self.ssa_attr.y.random()
+
+            # Cannot add obstacle inside obstacle-free radii
+            if fast_norm(start_location - np.array([x,y])) <= self.start_obstacle_free_radius:
+                attempts += 1
+                continue
+            if fast_norm(goal_location - np.array([x,y])) <= self.goal_obstacle_free_radius:
+                attempts += 1
+                continue
+            
+            ssa_array_copy[ssa_idx].x[obs_idx] = x
+            ssa_array_copy[ssa_idx].y[obs_idx] = y
+
+            request_copy.scene_description.ssa_array = ssa_array_copy
+            b_valid = self.is_scenario_request_feasible(request_copy)
+            attempts += 1
+
+        ssa_array[ssa_idx].x[obs_idx] = x
+        ssa_array[ssa_idx].y[obs_idx] = y
+
+        # Add to change log
+        change_log.new.x = x
+        change_log.new.y = y
+        change_log.new.yaw = ssa_array[ssa_idx].yaw[obs_idx]
+        change_log.new.scale = ssa_array[ssa_idx].scale[obs_idx]
+        change_log.new.b_visible = True
+
+        return True, attempts, change_log
 
     def perturb_rand_txt_attr(self, scenario_request: auto_scene_gen_srvs.RunScenario.Request):
         """Perturb a random textural attribute in the given scenario request
