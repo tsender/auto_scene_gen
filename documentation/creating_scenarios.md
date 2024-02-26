@@ -223,7 +223,7 @@ def main_step(wid: int):
   self.submit_run_scenario_request(wid)
 
   # Block until ready to analyze scenario
-  if worker.b_waiting_for_analyze_scenario_request:
+  if worker.b_waiting_for_analyze_scenario_request or worker.analyze_scenario_request is None:
     return
 
   # Analyze the latest scenario...

@@ -77,6 +77,10 @@ class AutoSceneGenWorkerRef:
         
         self.num_resubmission_attempts = 0
 
+    def reset(self):
+        """Custom reset function you can override. Will be automatically called once all vehicle nodes are registered."""
+        pass
+
 
 class AutoSceneGenClient(rclpy.node.Node):
     """This class contains the base ROS client interface to connect to the UE4 AutomaticSceneGeneration plugin.
@@ -163,6 +167,8 @@ class AutoSceneGenClient(rclpy.node.Node):
         self.main_loop_timer = self.create_timer(0.01, self.main_loop_timer_cb, callback_group=self.main_loop_cb_group)
         self.main_loop_wid = self.base_wid
         self.utility_loop_timer = self.create_timer(0.01, self.utility_loop_timer_cb)
+
+        self.b_shutting_down = False
         
         self.log("info", "Initialized AutoSceneGenClient")
         self.log("info", "-" * 60, b_log_ros=False)
@@ -404,6 +410,7 @@ class AutoSceneGenClient(rclpy.node.Node):
             self.log("info", f"Registered vehicle node {request.node_name} for Worker {wid}")
 
             if len(worker.registered_vehicle_nodes) == self.num_vehicle_nodes:
+                worker.reset()
                 self.log("info", f"Worker {wid} vehicle nodes are all registered")
         else:
             self.log("info", f"Vehicle node {request.node_name} is already registered for Worker {wid}")
@@ -519,6 +526,8 @@ class AutoSceneGenClient(rclpy.node.Node):
 
     def main_loop_timer_cb(self):
         """This is the main loop that will run until the node is destroyed"""
+        if self.b_shutting_down:
+            return
         self.main_step(self.main_loop_wid)
         self.main_loop_wid += 1
         if self.main_loop_wid == self.base_wid + self.num_workers:
@@ -538,6 +547,7 @@ class AutoSceneGenClient(rclpy.node.Node):
         """
         self.log("info", "-" * 30 + 'SHUTDOWN' + "-" * 30, b_log_ros=False)
         self.log("info", f"Sending offline signal")
+        self.b_shutting_down = True
         for i in range(10):
             msg = auto_scene_gen_msgs.StatusCode()
             msg.status = auto_scene_gen_msgs.StatusCode.OFFLINE
