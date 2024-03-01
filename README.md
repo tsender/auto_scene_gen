@@ -55,3 +55,8 @@ As mentioned in the [AutomaticSceneGeneration](https://github.com/tsender/Automa
    ```
    source ~/auto_scene_gen_ws/my_workspace/install/setup.bash
    ```
+
+## Known Problems
+
+1. My custom AutoSceneGenClient node is no longer able to send RunScenario requests to the AutoSceneGenWorkers in UE4.
+   - To the best of our knowledge, this is a problem with the rosbridge_suite code. Unfortunately we do not know what causes this problem. In our experience, it occurs randomly after a few hours of running and we have been unable to find a repeatable sequence of events that causes this behavior. The only known solution is to shutdown and restart the affected rosbridge_suite nodes.

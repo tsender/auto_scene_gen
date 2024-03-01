@@ -573,7 +573,7 @@ class AutoSceneGenVehicleNode(rclpy.node.Node):
             req.worker_id = self.wid
             req.node_name = self.get_name()
             response = self.unregister_node_cli.call_async(req)
-            time.sleep(0.1)
+            time.sleep(0.1) # A small delay ensures the request is received
 
 
 def spin_vehicle_node(node: AutoSceneGenVehicleNode, num_threads: int = None):
