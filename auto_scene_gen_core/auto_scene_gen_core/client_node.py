@@ -545,7 +545,7 @@ class AutoSceneGenClient(rclpy.node.Node):
         """Call this function immediately after rclpy.ok() returns False to properly shutdown this node. 
         Upon shutdown we need to send an offline signal to all AutoSceneGen workers and any other nodes relying on this node's status.
         """
-        self.log("info", "-" * 30 + 'SHUTDOWN' + "-" * 30, b_log_ros=False)
+        self.log("info", "-" * 30 + "SHUTDOWN" + "-" * 30, b_log_ros=False)
         self.log("info", f"Sending offline signal")
         self.b_shutting_down = True
         for i in range(10):
