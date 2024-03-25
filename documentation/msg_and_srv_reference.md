@@ -1,12 +1,13 @@
 This page contains the custom message and service definitions within the `auto_scene_gen_msgs` package.
 
 Quick Links
+- [Home Page](https://github.com/tsender/auto_scene_gen)
 - [Messages Reference](#autoscenegen-messages-reference)
 - [Services Reference](#autoscenegen-services-reference)
 
 # AutoSceneGen Messages Reference
 
-## LandscapeDescription.msg
+## [LandscapeDescription.msg](../auto_scene_gen_msgs/msg/LandscapeDescription.msg)
 
 Contains the description for creating an AutoSceneGenLandscape.
 
@@ -16,7 +17,7 @@ nominal_size            | float32           | The side-length [m or cm] of the n
 subdivisions            | float32           | The number of times the two base triangles in the nominal landscape should be subdivided. The landscape will have 2^subdivisions triangles along each edge. Each vertex in the mesh will be spaced nominal_size/(2^subdivisions) [m or cm] apart in a grid.
 border                  | float32           | (Optional) Denotes the approximate length to extend the nominal landscape in [m or cm]. <br>Using this will border the nominal landscape by ceil(Border/VertexSpacing) vertices in the four XY Cartesional directions, where VertexSpacing is discussed above.
 
-## OdometryWithoutCovariance.msg
+## [OdometryWithoutCovariance.msg](../auto_scene_gen_msgs/msg/OdometryWithoutCovariance.msg)
 
 This represents an estimate of a position and velocity in free space without covariance. The pose in this message should be specified in the coordinate frame given by header.frame_id. The twist in this message should be specified in the coordinate frame given by the child_frame_id.
 
@@ -27,7 +28,7 @@ child_frame_id          | string                | Frame id the pose points to. T
 pose                    | geometry_msgs/Pose    | Estimated pose that is typically relative to a fixed world frame.
 twist                   | geometry_msgs/Twist   | Estimated linear and angular velocity relative to child_frame_id.
 
-## PhysXControl.msg
+## [PhysXControl.msg](../auto_scene_gen_msgs/msg/PhysXControl.msg)
 
 Message for sending basic PhysX control commands to a PhysX vehicle.
 
@@ -38,7 +39,7 @@ longitudinal_velocity   | float32               | Vehicle's longitudinal velocit
 steering_angle          | float32               | Range = [-MaxSteeringAngle, +MaxSteeringAngle] in [deg].
 handbrake               | bool                  | false = disengaged, true = engaged.
 
-## SceneCaptureSettings.msg
+## [SceneCaptureSettings.msg](../auto_scene_gen_msgs/msg/SceneCaptureSettings.msg)
 
 Message for specifying scene capture settings for the AutoSceneGenWorker. The camera used has a 60 deg. FOV.
 
@@ -62,7 +63,7 @@ right_front_aerial        | bool                | Draw perspective aerial-like v
 vehicle_start_pov         | bool                | Draw perspective view of the vehicle's POV at its starting location.
 vehicle_start_rear_aerial | bool                | Draw perspective 3rd person rear aerial view of the vehicle at the starting location.
 
-## SceneDescription.msg
+## [SceneDescription.msg](../auto_scene_gen_msgs/msg/SceneDescription.msg)
 
 This message contains information regarding the scene description.
 
@@ -73,7 +74,7 @@ sunlight_inclination    | float32                                           | Th
 sunlight_yaw_angle      | float32                                           | The yaw angle the sunlight is pointing in (i.e., the angle the shadow will be cast in) [deg].
 ssa_array               | auto_scene_gen_msgs/StructuralSceneActorLayout[]  | An array defining all of the types of structural scene actors and their attributes from which to place in the UE4 scene.
 
-## StatusCode.msg
+## [StatusCode.msg](../auto_scene_gen_msgs/msg/StatusCode.msg)
 
 Indicates the current status of some entity.
 
@@ -81,7 +82,7 @@ Indicates the current status of some entity.
 ------------------------|-----------------------|----------------
 status                  | uint8                 | The current status.<br>OFFLINE = 0<br>ONLINE_AND_READY = 1<br>ONLINE_AND_RUNNING = 2
 
-## StructuralSceneActorLayout.msg
+## [StructuralSceneActorLayout.msg](../auto_scene_gen_msgs/msg/StructuralSceneActorLayout.msg)
 
 This message specifies all of the attributes for the actors of a specific structural scene actor (SSA) subclass that we wish to place in a UE4 scene.
 
@@ -97,21 +98,21 @@ yaw                     | float32[]             | Yaw angles in [deg].
 scale                   | float32[]             | The mesh's scale (applies to all 3 axes).
 
 
-## VehicleNodeOperatingInfo.msg
+## [VehicleNodeOperatingInfo.msg](../auto_scene_gen_msgs/msg/VehicleNodeOperatingInfo.msg)
 
-This message is published by the AutoSceneGen client to tell all registered vehicle nodes important operating information. This info includes: if all vehicle nodes for that worker are ready, where the nodes should save their internal data and how much data to save. Each array has the same length and all data is organized according to the order of the worker ID in the 'worker_ids' field.
+This message is published by the AutoSceneGenClient to tell all registered vehicle nodes important operating information. This info includes: if all vehicle nodes for that worker are ready, where the nodes should save their internal data and how much data to save. Each array has the same length and all data is organized according to the order of the worker ID in the 'worker_ids' field.
 
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
-worker_ids              | uint8[]               | AutoSceneGen worker IDs.
-scenario_numbers        | uint32[]              | List of the scenario numbers being run on each AutoSceneGen worker, listed in the same order as worker_ids.
+worker_ids              | uint8[]               | AutoSceneGenWorker IDs.
+scenario_numbers        | uint32[]              | List of the scenario numbers being run on each AutoSceneGenWorker, listed in the same order as worker_ids.
 ok_to_run               | bool[]                | Indicates if it is okay for the vehicle nodes to run, listed in the same order as worker_ids.
 save_dirs               | string[]              | List of directories to save data to, listed in the same order as worker_ids.
 save_minimal            | bool[]                | List of booleans to indicate if the vehicle node should only save the least amount of data required (and skip any time-consuming analyses), listed in the same order as worker_ids.
 
-## VehicleStatus.msg
+## [VehicleStatus.msg](../auto_scene_gen_msgs/msg/VehicleStatus.msg)
 
-This message contains the enable status of an AutoSceneGen vehicle.
+This message contains the enable status of an AutoSceneGenVehicle.
 
 **Field**               | **Type**              | **Description**
 ------------------------|-----------------------|----------------
@@ -120,7 +121,7 @@ preempted               | bool                  | Indicates if the vehicle was d
 
 # AutoSceneGen Services Reference
 
-## AnalyzeScenario.srv
+## [AnalyzeScenario.srv](../auto_scene_gen_msgs/srv/AnalyzeScenario.srv)
 
 This service message is used to convey useful information about the vehicle's last run.
 
@@ -152,9 +153,9 @@ Idling and Getting Stuck
 ------------------------|-----------------------|----------------
 received                | bool                  | Indicates the AutoSceneGenClient received the AnalyzeScenario request.
 
-## NotifyReady.srv
+## [NotifyReady.srv](../auto_scene_gen_msgs/srv/NotifyReady.srv)
 
-This service message is used for each vehicle node to notify the AutoSceneGenClient that it is ready for the next scenario. These notifications allow the client to ensure all nodes are ready before proceeding on to the next scenario
+This service message is used for each vehicle node to notify the AutoSceneGenClient that it is ready for the next scenario. These notifications allow the client to ensure all nodes are ready before proceeding on to the next scenario.
 
 ### Request
 **Field**               | **Type**              | **Description**
@@ -171,7 +172,7 @@ reason_for_rerun        | string                | Reason for requesting a rerun
 received                | bool                  | Indicates the AutoSceneGenClient received the notification.
 accepted                | bool                  | Indicates the AutoSceneGenClient accepted the request. False means it was ignored (since it accepted the first request).
 
-## RegisterVehicleNode.srv
+## [RegisterVehicleNode.srv](../auto_scene_gen_msgs/srv/RegisterVehicleNode.srv)
 
 This service message is used for each vehicle node to register itself with the AutoSceneGenClient. Registering guarantees the AutoSceneGenClient will not proceed until all registered vehicle nodes have indicated they are ready to proceed with a NotifyReady request.
 
@@ -186,7 +187,7 @@ node_name               | string                | Name of the node to register.
 ------------------------|-----------------------|----------------
 received                | bool                  | Indicates the AutoSceneGenClient received the notification.
 
-## RunScenario.srv
+## [RunScenario.srv](../auto_scene_gen_msgs/srv/RunScenario.srv)
 
 This service message is used to define the scenario that the AutoSceneGenWorker should run. RunScenario requests are to be submitted by an external entity from UE4 which we refer to as an AutoSceneGenClient.
 
@@ -214,7 +215,7 @@ scene_capture_settings        | auto_scene_gen_msgs/SceneCaptureSettings | Scene
 ------------------------|-----------------------|----------------
 received                | bool                  | Indicates the AutoSceneGenWorker received the RunScenario request
 
-## WorkerIssueNotification.srv
+## [WorkerIssueNotification.srv](../auto_scene_gen_msgs/srv/WorkerIssueNotification.srv)
 
 This services is to be invoked by the AutoSceneGenWorker to inform the AutoSceneGenClient of an issue.
 

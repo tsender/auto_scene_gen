@@ -15,6 +15,14 @@ Below are some important documentation links explaining how to use this repo:
 - [Creating and Running Scenarios](documentation/creating_scenarios.md)
 - [Creating Vehicle Nodes](documentation/creating_vehicle_nodes.md)
 
+For a full working example of using this interface with the AutomaticSceneGeneration plugin, please see our other repo [bacre_2D](https://github.com/tsender/bacre_2D) which was developed for our research paper below.
+
+### Citation
+
+If you use our work in an academic context, we would greatly appreciate it if you used the following citation:
+
+Coming Soon
+
 ## Software Requirements and Installation
 
 ### Supported Systems
@@ -27,7 +35,7 @@ For reference, these are the libraries we rely on that are not commonly included
 - (C++) The `date` library https://github.com/HowardHinnant/date, used for logging purposes
 - (Python 3) `paramiko`, used for ssh
 
-As mentioned in the [AutomaticSceneGeneration](https://github.com/tsender/AutomaticSceneGeneration) documentation, we utilize the `ROSIntegration` UE4 plugin for ROS communication, which further requires use of the `rosbridge_suite` repo (which will run on Ubuntu). As far as the Ubuntu dependencies is concerned, you will need to use the `ros2` branch on @tsender's fork of [rosbridge_suite](https://github.com/tsender/rosbridge_suite/tree/main) because the authors of `rosbridge_suite` have not yet accepted the PR https://github.com/RobotWebTools/rosbridge_suite/pull/824 (please feel free to contribute to the PR in any way).
+As mentioned in the [AutomaticSceneGeneration](https://github.com/tsender/AutomaticSceneGeneration) documentation, we utilize the `ROSIntegration` UE4 plugin for ROS communication, which further requires use of the `rosbridge_suite` repo (which will run on Ubuntu). As far as the Ubuntu dependencies is concerned, you will need to use the `ros2` branch on @tsender's fork of [rosbridge_suite](https://github.com/tsender/rosbridge_suite/tree/ros2) because the authors of `rosbridge_suite` have not yet accepted the PR https://github.com/RobotWebTools/rosbridge_suite/pull/824 (please feel free to contribute to the PR in any way).
 
 ### Installation
 

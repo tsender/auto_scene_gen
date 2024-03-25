@@ -2,8 +2,8 @@
 
 Quick Links:
 - [Home Page](https://github.com/tsender/auto_scene_gen)
-- [Message and service definitions](https://github.com/tsender/auto_scene_gen/blob/main/documentation/msg_and_srv_reference.md)
-- [Creating vehicle nodes](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_vehicle_nodes.md)
+- [Message and Service Definitions](msg_and_srv_reference.md)
+- [Creating Vehicle Nodes](creating_vehicle_nodes.md)
 
 One of the primary functions of this interface is to provide a set of tools to request AutoSceneGenWorkers to create various scenarios for off-road AV testing, conduct the simulated navigation task, and report back what the vehicle's actions were. The interface we developed for this task requires an AutoSceneGenWorkerRef, an AutoSceneGenScenarioBuilder, and an AutoSceneGenClient node. This particular interface only supports the use of Python (using our provided classes).
 

@@ -1,9 +1,9 @@
 # Creating and Working with AutoSceneGenVehicleNodes
 
 Quick Links:
-- [Home Page](https://github.com/tsender/auto_scene_gen/tree/main)
-- [Message and service definitions](https://github.com/tsender/auto_scene_gen/blob/main/documentation/msg_and_srv_reference.md)
-- [Creating and running scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md)
+- [Home Page](https://github.com/tsender/auto_scene_gen)
+- [Message and Service Definitions](msg_and_srv_reference.md)
+- [Creating and Running Scenarios](creating_scenarios.md)
 
 Once you know how to [create scenarios](https://github.com/tsender/auto_scene_gen/blob/main/documentation/creating_scenarios.md) using the provided ROS interface, you will then want to create ROS nodes that can control the AutoSceneGenVehicle operating in Unreal Engine. Because we expect that you will be creating many different scenarios, one after the other, and do not want to have to restart your vehicle nodes each time to reset them, we developed a special vehicle node, called an AutoSceneGenVehicleNode, that can seamlessly interact with an AutoSceneGenVehicle, the corresponding AutoSceneGenWorker, and the correpsonding AutoSceneGenClient. To offer the most flexibility, we provide both a Python and a C++ implementation for the AutoSceneGenVehicleNode, and we will provide some templated code demonstrating how to properly work with these classes.
 
